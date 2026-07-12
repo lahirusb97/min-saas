@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FramesService } from './frames.service';
 import { CreateFrameDto } from './dto/create-frame.dto';
 import { UpdateFrameDto } from './dto/update-frame.dto';
@@ -30,8 +30,8 @@ export class FramesController {
   }
 
   @Get('models')
-  listModels(@CurrentUser() user: AuthUser) {
-    return this.framesService.listModels(user.id);
+  listModels(@CurrentUser() user: AuthUser, @Query('brand') brand?: string) {
+    return this.framesService.listModels(user.id, brand);
   }
 
   @Get('colors')

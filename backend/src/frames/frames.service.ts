@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Frame } from './entities/frame.entity';
 import { Brand } from './entities/brand.entity';
+import { FrameModel } from './entities/frame-model.entity';
 import { Color } from './entities/color.entity';
 import { Stock } from './entities/stock.entity';
 import { Branch } from '../auth/entities/branch.entity';
@@ -12,17 +13,6 @@ import { UpdateFrameDto } from './dto/update-frame.dto';
 
 function normalizeName(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-function dedupeByNormalizedName(values: string[]) {
-  const seen = new Map<string, string>();
-  for (const value of values) {
-    const key = normalizeName(value);
-    if (key && !seen.has(key)) {
-      seen.set(key, value);
-    }
-  }
-  return [...seen.values()];
 }
 
 interface Context {
@@ -35,6 +25,7 @@ export class FramesService {
   constructor(
     @InjectRepository(Frame) private readonly framesRepository: Repository<Frame>,
     @InjectRepository(Brand) private readonly brandsRepository: Repository<Brand>,
+    @InjectRepository(FrameModel) private readonly modelsRepository: Repository<FrameModel>,
     @InjectRepository(Color) private readonly colorsRepository: Repository<Color>,
     @InjectRepository(Stock) private readonly stocksRepository: Repository<Stock>,
     @InjectRepository(Branch) private readonly branchesRepository: Repository<Branch>,
@@ -65,6 +56,28 @@ export class FramesService {
     return created.id;
   }
 
+  private async findBrandIdByName(organizationId: number, name: string): Promise<number | undefined> {
+    const target = normalizeName(name);
+    if (!target) {
+      return undefined;
+    }
+    const brandsInOrg = await this.brandsRepository.find({ where: { organizationId } });
+    return brandsInOrg.find((b) => normalizeName(b.name) === target)?.id;
+  }
+
+  /** Models belong to a brand: get-or-create is scoped by (organizationId, brandId) so the same model name can exist under different brands. */
+  private async getOrCreateModel(organizationId: number, brandId: number, name: string): Promise<number> {
+    const trimmed = name.trim();
+    const target = normalizeName(trimmed);
+    const modelsForBrand = await this.modelsRepository.find({ where: { organizationId, brandId } });
+    const existing = modelsForBrand.find((m) => normalizeName(m.name) === target);
+    if (existing) {
+      return existing.id;
+    }
+    const created = await this.modelsRepository.save(this.modelsRepository.create({ organizationId, brandId, name: trimmed }));
+    return created.id;
+  }
+
   private async getOrCreateColor(organizationId: number, name: string): Promise<number | undefined> {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -80,34 +93,22 @@ export class FramesService {
     return created.id;
   }
 
-  private async listModelsForOrg(organizationId: number) {
-    const rows = await this.framesRepository
-      .createQueryBuilder('frame')
-      .select('DISTINCT frame.modelNumber', 'modelNumber')
-      .where('frame.organizationId = :organizationId', { organizationId })
-      .getRawMany<{ modelNumber: string }>();
-    return dedupeByNormalizedName(rows.map((r) => r.modelNumber).filter(Boolean));
-  }
-
   private async getOrCreateFrame(
     organizationId: number,
     brandId: number,
-    modelNumber: string,
+    modelId: number,
     colorId: number | undefined,
     frameType: string | undefined,
   ): Promise<Frame> {
-    const trimmedModel = modelNumber.trim();
-    const targetModel = normalizeName(trimmedModel);
     const trimmedType = frameType?.trim();
     const targetType = trimmedType ? normalizeName(trimmedType) : undefined;
 
     const candidates = await this.framesRepository.find({
-      where: { organizationId, brandId },
-      relations: { brand: true, color: true },
+      where: { organizationId, brandId, modelId },
+      relations: { brand: true, model: true, color: true },
     });
     const existing = candidates.find(
       (f) =>
-        normalizeName(f.modelNumber) === targetModel &&
         (f.colorId ?? null) === (colorId ?? null) &&
         (f.frameType ? normalizeName(f.frameType) : undefined) === targetType,
     );
@@ -118,12 +119,12 @@ export class FramesService {
     const created = this.framesRepository.create({
       organizationId,
       brandId,
-      modelNumber: trimmedModel,
+      modelId,
       colorId,
       frameType: trimmedType || undefined,
     });
     const saved = await this.framesRepository.save(created);
-    return this.framesRepository.findOneOrFail({ where: { id: saved.id }, relations: { brand: true, color: true } });
+    return this.framesRepository.findOneOrFail({ where: { id: saved.id }, relations: { brand: true, model: true, color: true } });
   }
 
   private async upsertStock(branchId: number, frameId: number, qty: number, price: number, threshold: number) {
@@ -144,7 +145,7 @@ export class FramesService {
       id: stock.id,
       frameId: frame.id,
       brand: frame.brand.name,
-      modelNumber: frame.modelNumber,
+      modelNumber: frame.model.name,
       color: frame.color?.name,
       frameType: frame.frameType,
       qty: stock.qty,
@@ -159,8 +160,9 @@ export class FramesService {
   async create(userId: number, dto: CreateFrameDto) {
     const { organizationId, branchId } = await this.getContext(userId);
     const brandId = await this.getOrCreateBrand(organizationId, dto.brand);
+    const modelId = await this.getOrCreateModel(organizationId, brandId, dto.modelNumber);
     const colorId = dto.color ? await this.getOrCreateColor(organizationId, dto.color) : undefined;
-    const frame = await this.getOrCreateFrame(organizationId, brandId, dto.modelNumber, colorId, dto.frameType);
+    const frame = await this.getOrCreateFrame(organizationId, brandId, modelId, colorId, dto.frameType);
     const stock = await this.upsertStock(branchId, frame.id, dto.qty, dto.price, dto.threshold ?? 5);
     return this.toResponse({ ...stock, frame });
   }
@@ -169,7 +171,7 @@ export class FramesService {
     const { branchId } = await this.getContext(userId);
     const stocks = await this.stocksRepository.find({
       where: { branchId },
-      relations: { frame: { brand: true, color: true } },
+      relations: { frame: { brand: true, model: true, color: true } },
       order: { createdAt: 'DESC' },
     });
     return stocks.map((stock) => this.toResponse(stock));
@@ -179,7 +181,7 @@ export class FramesService {
     const { branchId } = await this.getContext(userId);
     const stock = await this.stocksRepository.findOne({
       where: { id, branchId },
-      relations: { frame: { brand: true, color: true } },
+      relations: { frame: { brand: true, model: true, color: true } },
     });
     if (!stock) {
       throw new NotFoundException('Frame not found');
@@ -200,9 +202,9 @@ export class FramesService {
     if (needsNewFrame) {
       const brandId = brand ? await this.getOrCreateBrand(organizationId, brand) : stock.frame.brandId;
       const colorId = color !== undefined ? await this.getOrCreateColor(organizationId, color) : stock.frame.colorId;
-      const resolvedModelNumber = modelNumber ?? stock.frame.modelNumber;
+      const modelId = modelNumber ? await this.getOrCreateModel(organizationId, brandId, modelNumber) : stock.frame.modelId;
       const resolvedFrameType = frameType ?? stock.frame.frameType;
-      const frame = await this.getOrCreateFrame(organizationId, brandId, resolvedModelNumber, colorId, resolvedFrameType);
+      const frame = await this.getOrCreateFrame(organizationId, brandId, modelId, colorId, resolvedFrameType);
       stock.frameId = frame.id;
       stock.frame = frame;
     }
@@ -213,7 +215,7 @@ export class FramesService {
 
     const saved = await this.stocksRepository.save(stock);
     return this.toResponse(
-      await this.stocksRepository.findOneOrFail({ where: { id: saved.id }, relations: { frame: { brand: true, color: true } } }),
+      await this.stocksRepository.findOneOrFail({ where: { id: saved.id }, relations: { frame: { brand: true, model: true, color: true } } }),
     );
   }
 
@@ -229,9 +231,19 @@ export class FramesService {
     return brands.map((b) => b.name);
   }
 
-  async listModels(userId: number) {
+  /** Model numbers belong to a brand: pass `brand` to only list models already recorded under that brand. */
+  async listModels(userId: number, brand?: string) {
     const { organizationId } = await this.getContext(userId);
-    return this.listModelsForOrg(organizationId);
+    if (brand?.trim()) {
+      const brandId = await this.findBrandIdByName(organizationId, brand);
+      if (!brandId) {
+        return [];
+      }
+      const models = await this.modelsRepository.find({ where: { organizationId, brandId }, order: { name: 'ASC' } });
+      return models.map((m) => m.name);
+    }
+    const models = await this.modelsRepository.find({ where: { organizationId }, order: { name: 'ASC' } });
+    return models.map((m) => m.name);
   }
 
   async listColors(userId: number) {

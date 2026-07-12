@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Organization } from '../../auth/entities/organization.entity';
 import { Brand } from './brand.entity';
+import { FrameModel } from './frame-model.entity';
 import { Color } from './color.entity';
 
 @Entity('frames')
@@ -15,8 +16,12 @@ export class Frame {
   @Column({ type: 'int' })
   brandId!: number;
 
-  @Column()
-  modelNumber!: string;
+  @ManyToOne(() => FrameModel)
+  @JoinColumn({ name: 'modelId' })
+  model!: FrameModel;
+
+  @Column({ type: 'int' })
+  modelId!: number;
 
   @ManyToOne(() => Color, { nullable: true })
   @JoinColumn({ name: 'colorId' })

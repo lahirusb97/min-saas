@@ -9,6 +9,63 @@ import { frameService } from '../services/frameService'
 import { lensService } from '../services/lensService'
 import { accessoryService } from '../services/accessoryService'
 
+/** Free-text input with a filtered dropdown of existing values, so users can quickly reuse an existing brand or add a new one. */
+function AutocompleteInput({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+}: {
+  value: string
+  onChange: (val: string) => void
+  options: string[]
+  placeholder?: string
+  disabled?: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const filtered = value.trim()
+    ? options.filter((opt) => opt.toLowerCase().includes(value.trim().toLowerCase()))
+    : options
+
+  return (
+    <div className="relative">
+      <input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={disabled}
+      />
+      {isOpen && filtered.length > 0 && (
+        <div className="custom-select-dropdown z-50 animate-fade-in" style={{ zIndex: 9999 }}>
+          <div className="custom-select-options-list">
+            {filtered.map((opt) => (
+              <div
+                key={opt}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(opt)
+                  setIsOpen(false)
+                }}
+                className={`custom-select-option ${opt === value ? 'selected' : ''}`}
+              >
+                {opt}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function InventoryCreatePage() {
   const group = useInventoryGroup()
   const { addInventoryItem, showToast } = useFixDesk()
@@ -19,9 +76,9 @@ export function InventoryCreatePage() {
   const qtyRef = useRef<HTMLInputElement>(null)
   const priceRef = useRef<HTMLInputElement>(null)
   const thresholdRef = useRef<HTMLInputElement>(null)
-  const brandRef = useRef<HTMLInputElement>(null)
-  const modelNumberRef = useRef<HTMLInputElement>(null)
-  const colorRef = useRef<HTMLInputElement>(null)
+  const [brand, setBrand] = useState('')
+  const [modelNumber, setModelNumber] = useState('')
+  const [color, setColor] = useState('')
   const frameTypeRef = useRef<HTMLSelectElement>(null)
   const lensTypeRef = useRef<HTMLSelectElement>(null)
   const lensCoatingRef = useRef<HTMLSelectElement>(null)
@@ -40,9 +97,20 @@ export function InventoryCreatePage() {
   useEffect(() => {
     if (!isFrames) return
     frameService.listBrands().then(setBrandOptions)
-    frameService.listModels().then(setModelOptions)
     frameService.listColors().then(setColorOptions)
   }, [isFrames])
+
+  // Model numbers belong to a brand: only suggest models already recorded under the brand being typed.
+  useEffect(() => {
+    if (!isFrames || !brand.trim()) {
+      setModelOptions([])
+      return
+    }
+    const timeout = setTimeout(() => {
+      frameService.listModels(brand).then(setModelOptions)
+    }, 200)
+    return () => clearTimeout(timeout)
+  }, [isFrames, brand])
 
   useEffect(() => {
     if (!isLenses) return
@@ -65,14 +133,17 @@ export function InventoryCreatePage() {
       setSaving(true)
       try {
         await frameService.create({
-          brand: brandRef.current!.value.trim(),
-          modelNumber: modelNumberRef.current!.value.trim(),
-          color: colorRef.current!.value.trim(),
+          brand: brand.trim(),
+          modelNumber: modelNumber.trim(),
+          color: color.trim(),
           frameType: frameTypeRef.current!.value,
           qty: Number(qtyRef.current!.value || 0),
           price: Number(priceRef.current!.value || 0),
         })
         formRef.current?.reset()
+        setBrand('')
+        setModelNumber('')
+        setColor('')
         showToast(`Item added to ${label}`)
         navigate(`/dashboard/inventory/${slug}/list`)
       } catch (err) {
@@ -166,30 +237,21 @@ export function InventoryCreatePage() {
             <>
               <div className="field">
                 <label>Brand</label>
-                <input ref={brandRef} list="brand-options" placeholder="e.g. Ray-Ban" autoComplete="off" />
-                <datalist id="brand-options">
-                  {brandOptions.map((b) => (
-                    <option key={b} value={b} />
-                  ))}
-                </datalist>
+                <AutocompleteInput value={brand} onChange={setBrand} options={brandOptions} placeholder="e.g. Ray-Ban" />
               </div>
               <div className="field">
                 <label>Model Number</label>
-                <input ref={modelNumberRef} list="model-options" placeholder="e.g. RB5024" autoComplete="off" />
-                <datalist id="model-options">
-                  {modelOptions.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
+                <AutocompleteInput
+                  value={modelNumber}
+                  onChange={setModelNumber}
+                  options={modelOptions}
+                  placeholder={brand.trim() ? 'e.g. RB5024' : 'Enter a brand first'}
+                  disabled={!brand.trim()}
+                />
               </div>
               <div className="field">
                 <label>Color</label>
-                <input ref={colorRef} list="color-options" placeholder="e.g. Black" autoComplete="off" />
-                <datalist id="color-options">
-                  {colorOptions.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
+                <AutocompleteInput value={color} onChange={setColor} options={colorOptions} placeholder="e.g. Black" />
               </div>
               <div className="field">
                 <label>Type</label>

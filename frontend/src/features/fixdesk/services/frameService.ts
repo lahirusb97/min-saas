@@ -33,6 +33,7 @@ export const frameService = {
   update: (id: number, input: UpdateFrameInput) => api.patch<Frame>(`/frames/${id}`, input).then((res) => res.data),
   remove: (id: number) => api.delete<{ id: number }>(`/frames/${id}`).then((res) => res.data),
   listBrands: () => api.get<string[]>('/frames/brands').then((res) => res.data),
-  listModels: () => api.get<string[]>('/frames/models').then((res) => res.data),
+  listModels: (brand?: string) =>
+    api.get<string[]>('/frames/models', { params: brand ? { brand } : undefined }).then((res) => res.data),
   listColors: () => api.get<string[]>('/frames/colors').then((res) => res.data),
 }
