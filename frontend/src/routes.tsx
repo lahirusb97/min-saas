@@ -26,6 +26,12 @@ const AccessoriesPage = lazy(() =>
 const InventoryPage = lazy(() =>
   import('./features/fixdesk/pages/InventoryPage').then((m) => ({ default: m.InventoryPage })),
 )
+const InventoryCreatePage = lazy(() =>
+  import('./features/fixdesk/pages/InventoryCreatePage').then((m) => ({ default: m.InventoryCreatePage })),
+)
+const InventoryListPage = lazy(() =>
+  import('./features/fixdesk/pages/InventoryListPage').then((m) => ({ default: m.InventoryListPage })),
+)
 const SettingsPage = lazy(() =>
   import('./features/fixdesk/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -60,7 +66,14 @@ export const router = createBrowserRouter([
           { path: 'customer', element: withSuspense(<CustomerPage />) },
           { path: 'repair', element: withSuspense(<RepairPage />) },
           { path: 'accessories', element: withSuspense(<AccessoriesPage />) },
-          { path: 'inventory', element: withSuspense(<InventoryPage />) },
+          {
+            path: 'inventory',
+            children: [
+              { index: true, element: withSuspense(<InventoryPage />) },
+              { path: ':slug/create', element: withSuspense(<InventoryCreatePage />) },
+              { path: ':slug/list', element: withSuspense(<InventoryListPage />) },
+            ],
+          },
           { path: 'settings', element: withSuspense(<SettingsPage />) },
         ],
       },

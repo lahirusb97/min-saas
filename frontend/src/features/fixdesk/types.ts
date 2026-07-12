@@ -102,6 +102,10 @@ export interface InventoryItem {
   qty: number
   price: number
   threshold: number
+  brand?: string
+  modelNumber?: string
+  color?: string
+  frameType?: string
 }
 
 export interface ShopSettings {
@@ -135,3 +139,17 @@ export const INVENTORY_CATEGORIES = [
   'Tools',
   'Other',
 ]
+
+export const INVENTORY_GROUPS = {
+  frames: { slug: 'frames', label: 'Frames', categories: ['Frames'] },
+  lenses: { slug: 'lenses', label: 'Lenses', categories: ['Lenses'] },
+  accessories: {
+    slug: 'accessories',
+    label: 'Accessories',
+    categories: ['Screens', 'Batteries', 'Chargers', 'Cases & Covers', 'Tempered Glass', 'Cables', 'Tools', 'Other'],
+  },
+} as const
+
+export type InventoryGroupSlug = keyof typeof INVENTORY_GROUPS
+
+export const FRAME_TYPES = ['Full Rim', 'Half Rim', 'Rimless']
