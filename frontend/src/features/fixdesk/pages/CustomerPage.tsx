@@ -3,7 +3,6 @@ import { Check, Clock, RotateCcw, Calendar } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { fmt } from '../utils'
 
-const monthsList = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const refractionOptions = (() => {
   const options: string[] = []
@@ -120,9 +119,6 @@ export function CustomerPage() {
   const [address, setAddress] = useState('')
   const [customerNote, setCustomerNote] = useState('')
   const [dob, setDob] = useState('')
-  const [dobYear, setDobYear] = useState('')
-  const [dobMonth, setDobMonth] = useState('')
-  const [dobDay, setDobDay] = useState('')
   const [age, setAge] = useState<number | ''>('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const [dueDate, setDueDate] = useState(() => {
@@ -132,6 +128,7 @@ export function CustomerPage() {
 
   // Vision / Eye Details Toggle
   const [hasVisionDetails, setHasVisionDetails] = useState(true)
+  const [selectionTab, setSelectionTab] = useState<'frame' | 'lens'>('frame')
 
   // Vision Refraction Details
   const [rSph, setRSph] = useState('0.00')
@@ -175,31 +172,7 @@ export function CustomerPage() {
 
   // --- Dynamic Calculations ---
 
-  // Combine DOB parts into YYYY-MM-DD
-  useEffect(() => {
-    if (dobYear && dobMonth && dobDay) {
-      const mIdx = monthsList.indexOf(dobMonth)
-      const mStr = String(mIdx + 1).padStart(2, '0')
-      const dStr = dobDay.padStart(2, '0')
-      setDob(`${dobYear}-${mStr}-${dStr}`)
-    } else {
-      setDob('')
-    }
-  }, [dobYear, dobMonth, dobDay])
 
-  // DOB Dropdown lists generation
-  const currentYear = new Date().getFullYear()
-  const yearsList = Array.from({ length: 110 }, (_, i) => String(currentYear - i))
-  
-  // Dynamically calculate days based on selected month and year
-  const getDaysList = () => {
-    const y = parseInt(dobYear, 10) || currentYear
-    const mIdx = monthsList.indexOf(dobMonth)
-    const m = mIdx !== -1 ? mIdx : 0
-    const totalDays = new Date(y, m + 1, 0).getDate()
-    return Array.from({ length: totalDays }, (_, i) => String(i + 1).padStart(2, '0'))
-  }
-  const daysList = getDaysList()
 
   // Age calculation from DOB (cross-browser robust parsing)
   useEffect(() => {
@@ -268,21 +241,7 @@ export function CustomerPage() {
     // Look up latest prescription for DOB & other info
     const latestPres = db.prescriptions?.find(p => p.phone === cust.phone)
     if (latestPres) {
-      const dbDob = latestPres.dob || ''
-      setDob(dbDob)
-      if (dbDob) {
-        const parts = dbDob.split('-')
-        if (parts.length === 3) {
-          setDobYear(parts[0])
-          const mIdx = parseInt(parts[1], 10) - 1
-          setDobMonth(monthsList[mIdx] || '')
-          setDobDay(parts[2])
-        }
-      } else {
-        setDobYear('')
-        setDobMonth('')
-        setDobDay('')
-      }
+      setDob(latestPres.dob || '')
       setDueDate(latestPres.dueDate || (() => {
         const today = new Date()
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -291,9 +250,6 @@ export function CustomerPage() {
       setCustomerNote(latestPres.note || '')
     } else {
       setDob('')
-      setDobYear('')
-      setDobMonth('')
-      setDobDay('')
       const today = new Date()
       setDueDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
     }
@@ -368,9 +324,6 @@ export function CustomerPage() {
     setAddress('')
     setCustomerNote('')
     setDob('')
-    setDobYear('')
-    setDobMonth('')
-    setDobDay('')
     setAge('')
     setHasVisionDetails(true)
     setShowSearchDropdown(false)
@@ -400,6 +353,7 @@ export function CustomerPage() {
     setManualLensCoating('')
     setManualLensPrice(0)
     setPrescriptionNote('')
+    setSelectionTab('frame')
     setDiscount(0)
     setPayment(0)
     const today = new Date()
@@ -528,49 +482,31 @@ export function CustomerPage() {
               <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder=" " />
               <label>Address</label>
             </div>
+
+            <div className={`field floating ${dob ? 'has-value' : ''}`}>
+              <input 
+                type="date" 
+                value={dob} 
+                onChange={(e) => setDob(e.target.value)} 
+                placeholder=" " 
+              />
+              <label>Date of Birth (DOB)</label>
+            </div>
+
+            <div className={`field floating ${age !== '' ? 'has-value' : ''}`}>
+              <input 
+                type="number" 
+                readOnly 
+                value={age} 
+                placeholder=" " 
+                className="bg-[var(--surface-3)] opacity-90 cursor-not-allowed"
+              />
+              <label>Age (Auto-calculated)</label>
+            </div>
             
             <div className={`field full floating ${customerNote ? 'has-value' : ''}`}>
               <input value={customerNote} onChange={(e) => setCustomerNote(e.target.value)} placeholder=" " />
               <label>Note / Remarks</label>
-            </div>
-          </div>
-
-          {/* DOB & Age Display */}
-          <div className="flex gap-4 items-end bg-[var(--surface-2)] p-4 rounded-[var(--radius)] border border-[var(--border)]">
-            <div className="flex-[3] flex flex-col gap-2">
-              <label className="text-[11.5px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
-                🎂 Date of Birth (DOB)
-              </label>
-              <div className="flex gap-2">
-                <div style={{ flex: 2 }}>
-                  <CustomSelect
-                    label="Year"
-                    value={dobYear}
-                    options={yearsList}
-                    onChange={setDobYear}
-                  />
-                </div>
-                <div style={{ flex: 2.2 }}>
-                  <CustomSelect
-                    label="Month"
-                    value={dobMonth}
-                    options={monthsList}
-                    onChange={setDobMonth}
-                  />
-                </div>
-                <div style={{ flex: 1.5 }}>
-                  <CustomSelect
-                    label="Day"
-                    value={dobDay}
-                    options={daysList}
-                    onChange={setDobDay}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col items-center justify-center bg-[var(--surface-3)] px-6 py-2 rounded-lg border border-[var(--border)] min-w-[80px]">
-              <span className="text-[10.5px] font-mono text-[var(--text-faint)] uppercase tracking-wider">Age</span>
-              <span className="text-[26px] font-bold font-display text-[var(--copper)] leading-none mt-1">{age !== '' ? age : '--'}</span>
             </div>
           </div>
 
@@ -685,119 +621,141 @@ export function CustomerPage() {
         {/* RIGHT COLUMN: Frame, Lens & Payments */}
         <div className="panel flex flex-col gap-6">
           
-          {/* Frame Selection */}
-          <div className="border border-[var(--border)] rounded-[var(--radius)] p-4 bg-[var(--surface)]">
-            <div className="flex items-center gap-2 mb-3 text-[14px] font-semibold border-b pb-2 border-[var(--border)] text-[var(--text-muted)]">
-              🕶️ FRAME SELECTION
-            </div>
-            
-            <div className="flex gap-4 mb-4">
-              <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
-                <input type="radio" checked={frameType === 'inventory'} onChange={() => setFrameType('inventory')} />
-                Search from Inventory
-              </label>
-              <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
-                <input type="radio" checked={frameType === 'manual'} onChange={() => setFrameType('manual')} />
-                Manual Custom Frame
-              </label>
-            </div>
-
-            {frameType === 'inventory' ? (
-              <CustomSelect
-                label="Select Frame from Stock"
-                value={frameInventoryId}
-                options={frameItems.map((f) => ({
-                  label: `${f.name} - (${fmt(db.settings.currency, f.price)})`,
-                  value: String(f.id)
-                }))}
-                onChange={setFrameInventoryId}
-              />
-            ) : (
-              <div className="form-grid">
-                <div className={`field floating ${manualFrameBrand ? 'has-value' : ''}`}>
-                  <input value={manualFrameBrand} onChange={(e) => setManualFrameBrand(e.target.value)} placeholder=" " />
-                  <label>Brand</label>
-                </div>
-                <div className={`field floating ${manualFrameCode ? 'has-value' : ''}`}>
-                  <input value={manualFrameCode} onChange={(e) => setManualFrameCode(e.target.value)} placeholder=" " />
-                  <label>Code / Model</label>
-                </div>
-                <div className={`field floating ${manualFrameColor ? 'has-value' : ''}`}>
-                  <input value={manualFrameColor} onChange={(e) => setManualFrameColor(e.target.value)} placeholder=" " />
-                  <label>Color</label>
-                </div>
-                <div className={`field floating ${manualFramePrice ? 'has-value' : ''}`}>
-                  <input type="number" min={0} value={manualFramePrice || ''} onChange={(e) => setManualFramePrice(Number(e.target.value))} placeholder=" " />
-                  <label>Price</label>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Lens Selection */}
-          <div className="border border-[var(--border)] rounded-[var(--radius)] p-4 bg-[var(--surface)]">
-            <div className="flex items-center gap-2 mb-3 text-[14px] font-semibold border-b pb-2 border-[var(--border)] text-[var(--text-muted)]">
-              🔍 LENS SELECTION
+          {/* Tabbed Selection Panel */}
+          <div className="border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] overflow-hidden">
+            <div className="flex border-b border-[var(--border)] bg-[var(--surface-2)]">
+              <button
+                type="button"
+                className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-all text-center ${
+                  selectionTab === 'frame'
+                    ? 'border-[var(--copper)] text-[var(--copper)] bg-[var(--surface)]'
+                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
+                }`}
+                onClick={() => setSelectionTab('frame')}
+              >
+                🕶️ FRAME SELECTION
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-all text-center ${
+                  selectionTab === 'lens'
+                    ? 'border-[var(--copper)] text-[var(--copper)] bg-[var(--surface)]'
+                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
+                }`}
+                onClick={() => setSelectionTab('lens')}
+              >
+                🔍 LENS SELECTION
+              </button>
             </div>
 
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
-                  <input type="radio" checked={lensType === 'inventory'} onChange={() => setLensType('inventory')} />
-                  Search from Inventory
-                </label>
-                <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
-                  <input type="radio" checked={lensType === 'manual'} onChange={() => setLensType('manual')} />
-                  Manual Custom Frame
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-[12px] font-semibold text-[var(--text-muted)]">Side</label>
-                <div style={{ width: '130px' }}>
-                  <CustomSelect
-                    label=""
-                    value={lensSide}
-                    options={[
-                      { label: 'Both', value: 'Both' },
-                      { label: 'Right Only', value: 'Right' },
-                      { label: 'Left Only', value: 'Left' }
-                    ]}
-                    onChange={(val) => setLensSide(val as any)}
-                  />
-                </div>
-              </div>
-            </div>
+            <div className="p-4">
+              {selectionTab === 'frame' ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-4 mb-2">
+                    <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
+                      <input type="radio" checked={frameType === 'inventory'} onChange={() => setFrameType('inventory')} />
+                      Search from Inventory
+                    </label>
+                    <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
+                      <input type="radio" checked={frameType === 'manual'} onChange={() => setFrameType('manual')} />
+                      Manual Custom Frame
+                    </label>
+                  </div>
 
-            {lensType === 'inventory' ? (
-              <CustomSelect
-                label="Select Lens from Stock"
-                value={lensInventoryId}
-                options={lensItems.map((l) => ({
-                  label: `${l.name} - (${fmt(db.settings.currency, l.price)} each)`,
-                  value: String(l.id)
-                }))}
-                onChange={setLensInventoryId}
-              />
-            ) : (
-              <div className="form-grid">
-                <div className={`field floating ${manualLensFactory ? 'has-value' : ''}`}>
-                  <input value={manualLensFactory} onChange={(e) => setManualLensFactory(e.target.value)} placeholder=" " />
-                  <label>Factory / Brand</label>
+                  {frameType === 'inventory' ? (
+                    <CustomSelect
+                      label="Select Frame from Stock"
+                      value={frameInventoryId}
+                      options={frameItems.map((f) => ({
+                        label: `${f.name} - (${fmt(db.settings.currency, f.price)})`,
+                        value: String(f.id)
+                      }))}
+                      onChange={setFrameInventoryId}
+                    />
+                  ) : (
+                    <div className="form-grid">
+                      <div className={`field floating ${manualFrameBrand ? 'has-value' : ''}`}>
+                        <input value={manualFrameBrand} onChange={(e) => setManualFrameBrand(e.target.value)} placeholder=" " />
+                        <label>Brand</label>
+                      </div>
+                      <div className={`field floating ${manualFrameCode ? 'has-value' : ''}`}>
+                        <input value={manualFrameCode} onChange={(e) => setManualFrameCode(e.target.value)} placeholder=" " />
+                        <label>Code / Model</label>
+                      </div>
+                      <div className={`field floating ${manualFrameColor ? 'has-value' : ''}`}>
+                        <input value={manualFrameColor} onChange={(e) => setManualFrameColor(e.target.value)} placeholder=" " />
+                        <label>Color</label>
+                      </div>
+                      <div className={`field floating ${manualFramePrice ? 'has-value' : ''}`}>
+                        <input type="number" min={0} value={manualFramePrice || ''} onChange={(e) => setManualFramePrice(Number(e.target.value))} placeholder=" " />
+                        <label>Price</label>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className={`field floating ${manualLensTypeName ? 'has-value' : ''}`}>
-                  <input value={manualLensTypeName} onChange={(e) => setManualLensTypeName(e.target.value)} placeholder=" " />
-                  <label>Lens Type</label>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
+                        <input type="radio" checked={lensType === 'inventory'} onChange={() => setLensType('inventory')} />
+                        Search from Inventory
+                      </label>
+                      <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
+                        <input type="radio" checked={lensType === 'manual'} onChange={() => setLensType('manual')} />
+                        Manual Custom Lens
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[12px] font-semibold text-[var(--text-muted)]">Side</label>
+                      <div style={{ width: '130px' }}>
+                        <CustomSelect
+                          label=""
+                          value={lensSide}
+                          options={[
+                            { label: 'Both', value: 'Both' },
+                            { label: 'Right Only', value: 'Right' },
+                            { label: 'Left Only', value: 'Left' }
+                          ]}
+                          onChange={(val) => setLensSide(val as any)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {lensType === 'inventory' ? (
+                    <CustomSelect
+                      label="Select Lens from Stock"
+                      value={lensInventoryId}
+                      options={lensItems.map((l) => ({
+                        label: `${l.name} - (${fmt(db.settings.currency, l.price)} each)`,
+                        value: String(l.id)
+                      }))}
+                      onChange={setLensInventoryId}
+                    />
+                  ) : (
+                    <div className="form-grid">
+                      <div className={`field floating ${manualLensFactory ? 'has-value' : ''}`}>
+                        <input value={manualLensFactory} onChange={(e) => setManualLensFactory(e.target.value)} placeholder=" " />
+                        <label>Factory / Brand</label>
+                      </div>
+                      <div className={`field floating ${manualLensTypeName ? 'has-value' : ''}`}>
+                        <input value={manualLensTypeName} onChange={(e) => setManualLensTypeName(e.target.value)} placeholder=" " />
+                        <label>Lens Type</label>
+                      </div>
+                      <div className={`field floating ${manualLensCoating ? 'has-value' : ''}`}>
+                        <input value={manualLensCoating} onChange={(e) => setManualLensCoating(e.target.value)} placeholder=" " />
+                        <label>Coating</label>
+                      </div>
+                      <div className={`field floating ${manualLensPrice ? 'has-value' : ''}`}>
+                        <input type="number" min={0} value={manualLensPrice || ''} onChange={(e) => setManualLensPrice(Number(e.target.value))} placeholder=" " />
+                        <label>Price (Per Lens)</label>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className={`field floating ${manualLensCoating ? 'has-value' : ''}`}>
-                  <input value={manualLensCoating} onChange={(e) => setManualLensCoating(e.target.value)} placeholder=" " />
-                  <label>Coating</label>
-                </div>
-                <div className={`field floating ${manualLensPrice ? 'has-value' : ''}`}>
-                  <input type="number" min={0} value={manualLensPrice || ''} onChange={(e) => setManualLensPrice(Number(e.target.value))} placeholder=" " />
-                  <label>Price (Per Lens)</label>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Prescription Notes */}
