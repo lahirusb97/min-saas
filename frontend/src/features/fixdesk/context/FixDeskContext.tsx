@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { AccJob, Customer, FixDeskDB, InventoryItem, RepairJob, ShopSettings } from '../types'
+import type { AccJob, Customer, FixDeskDB, InventoryItem, Prescription, RepairJob, ShopSettings } from '../types'
 import { seedDB } from './seed'
 
 const STORE_KEY = 'fixdesk-data'
@@ -27,6 +27,7 @@ interface FixDeskContextValue {
   addRepairJob: (input: Omit<RepairJob, 'id' | 'ticketNo' | 'createdAt'>) => RepairJob
   addAccJob: (input: Omit<AccJob, 'id' | 'ticketNo' | 'createdAt'>) => AccJob
   addInventoryItem: (input: Omit<InventoryItem, 'id'>) => void
+  addPrescription: (input: Omit<Prescription, 'id' | 'serialNo' | 'createdAt'>) => Prescription
   updateSettings: (settings: ShopSettings) => void
   toast: string | null
   showToast: (msg: string) => void
@@ -99,13 +100,51 @@ export function FixDeskProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const addPrescription = useCallback((input: Omit<Prescription, 'id' | 'serialNo' | 'createdAt'>) => {
+    const prescription = { ...input } as Prescription
+    setDb((prev) => {
+      const nextCounter = (prev.counters.prescription || 6) + 1
+      prescription.id = Date.now()
+      prescription.serialNo = String(nextCounter).padStart(4, '0')
+      prescription.createdAt = Date.now()
+
+      // Ensure the customer is saved to customers list
+      const customerExists = prev.customers.some(
+        (c) => c.phone.trim() === input.phone.trim()
+      )
+      const updatedCustomers = customerExists
+        ? prev.customers
+        : [
+            {
+              id: Date.now() - 1,
+              name: input.name,
+              phone: input.phone,
+              nic: input.nic,
+              email: '',
+              address: input.address,
+              notes: input.note,
+              createdAt: Date.now(),
+            },
+            ...prev.customers,
+          ]
+
+      return {
+        ...prev,
+        customers: updatedCustomers,
+        prescriptions: [prescription, ...(prev.prescriptions || [])],
+        counters: { ...prev.counters, prescription: nextCounter },
+      }
+    })
+    return prescription
+  }, [])
+
   const updateSettings = useCallback((settings: ShopSettings) => {
     setDb((prev) => ({ ...prev, settings }))
   }, [])
 
   const value = useMemo(
-    () => ({ db, addCustomer, addRepairJob, addAccJob, addInventoryItem, updateSettings, toast, showToast }),
-    [db, addCustomer, addRepairJob, addAccJob, addInventoryItem, updateSettings, toast, showToast],
+    () => ({ db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, toast, showToast }),
+    [db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, toast, showToast],
   )
 
   return <FixDeskContext.Provider value={value}>{children}</FixDeskContext.Provider>

@@ -23,6 +23,47 @@
   --font-body:'Inter',sans-serif;
 }
 
+.fixdesk.light-theme {
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --surface-3: #e5e7eb;
+  --border: #e5e7eb;
+  --text: #111827;
+  --text-muted: #4b5563;
+  --text-faint: #9ca3af;
+  --copper: #ca8a04;
+  --copper-dim: #fef3c7;
+  --teal: #0f766e;
+  --teal-dim: #ccfbf1;
+  --danger: #dc2626;
+  --danger-dim: #fee2e2;
+  --success: #16a34a;
+  --success-dim: #dcfce7;
+}
+
+.fixdesk.light-theme .topbar {
+  background: rgba(249, 250, 251, 0.85) !important;
+}
+
+.fixdesk.light-theme .panel {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.01) !important;
+}
+
+.fixdesk.light-theme .custom-select-dropdown {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.fixdesk.light-theme .icon-btn svg {
+  stroke: var(--text-muted) !important;
+}
+
+.fixdesk.light-theme {
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(202,138,4,0.04), transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(15,118,110,0.04), transparent 40%) !important;
+}
+
 .fixdesk *{box-sizing:border-box;}
 .fixdesk{
   background:var(--bg);
@@ -359,49 +400,559 @@
 /* mobile bottom nav (hidden on desktop) */
 .fixdesk .bottom-nav{display:none;}
 
+/* ===== PRESCRIPTION MODULE ===== */
+.fixdesk .relative { position: relative; }
+.fixdesk .absolute { position: absolute; }
+.fixdesk .z-50 { z-index: 50; }
+
+.fixdesk .field.floating {
+  position: relative;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.fixdesk .field.floating input,
+.fixdesk .field.floating select,
+.fixdesk .field.floating textarea {
+  width: 100%;
+  padding: 10px 12px !important;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.fixdesk .field.floating label {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  pointer-events: none;
+  transition: all 0.15s ease-out;
+  transform-origin: left top;
+  margin: 0;
+  padding: 0 4px;
+  background: var(--surface);
+  border-radius: 2px;
+}
+
+.fixdesk .field.floating input:focus ~ label,
+.fixdesk .field.floating input:not(:placeholder-shown) ~ label,
+.fixdesk .field.floating select:focus ~ label,
+.fixdesk .field.floating select:not([value=""]) ~ label,
+.fixdesk .field.floating.has-value label {
+  transform: translateY(-19px) scale(0.8);
+}
+
+/* Default floated/non-floated color when NOT focused is a soft grey */
+.fixdesk .field.floating input:not(:focus) ~ label,
+.fixdesk .field.floating select:not(:focus) ~ label,
+.fixdesk .field.floating.has-value label {
+  color: var(--text-muted);
+}
+
+/* Active focus brand color */
+.fixdesk .field.floating input:focus ~ label,
+.fixdesk .field.floating select:focus ~ label {
+  color: var(--teal);
+}
+
+/* Override background to match parent containers so the border covers perfectly */
+.fixdesk [class*="bg-[var(--surface-2)]"] .field.floating label {
+  background: var(--surface-2);
+}
+.fixdesk [class*="bg-[var(--surface-3)]"] .field.floating label {
+  background: var(--surface-3);
+}
+.fixdesk .bg-\[var\(--surface\)\] .field.floating label {
+  background: var(--surface);
+}
+
+/* Match copper theme color on active focus for Left Eye cards */
+.fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .field.floating input:focus ~ label,
+.fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .field.floating select:focus ~ label {
+  color: var(--copper);
+}
+
+
+/* ===== CUSTOM SELECT ===== */
+.fixdesk .custom-select-trigger {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13.5px;
+  min-height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: border-color 0.15s;
+}
+
+.fixdesk .field.floating.has-value .custom-select-trigger {
+  padding-top: 18px !important;
+  padding-bottom: 2px !important;
+}
+
+.fixdesk .custom-select-trigger:hover {
+  border-color: var(--text-muted);
+}
+
+.fixdesk .field.floating:focus-within .custom-select-trigger {
+  border-color: var(--teal);
+}
+
+.fixdesk .custom-select-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  max-height: 240px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fixdesk .custom-select-search {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+.fixdesk .custom-select-options-list {
+  overflow-y: auto;
+  max-height: 200px;
+  flex: 1;
+}
+
+/* Custom Scrollbar for dropdown options */
+.fixdesk .custom-select-options-list::-webkit-scrollbar {
+  width: 6px;
+}
+.fixdesk .custom-select-options-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fixdesk .custom-select-options-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.fixdesk .custom-select-options-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+.fixdesk .custom-select-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.fixdesk .custom-select-option:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.fixdesk .custom-select-option.selected {
+  background: var(--teal-dim);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+/* Left eye copper styling for selected states */
+.fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .custom-select-option.selected {
+  background: var(--copper-dim);
+  color: var(--copper);
+}
+
+.fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .field.floating:focus-within .custom-select-trigger {
+  border-color: var(--copper);
+}
+
+.fixdesk .flex { display: flex; }
+.fixdesk .flex-col { flex-direction: column; }
+.fixdesk .justify-between { justify-content: space-between; }
+.fixdesk .items-center { align-items: center; }
+.fixdesk .items-end { align-items: flex-end; }
+.fixdesk .justify-center { justify-content: center; }
+.fixdesk .gap-2 { gap: 8px; }
+.fixdesk .gap-3 { gap: 12px; }
+.fixdesk .gap-4 { gap: 16px; }
+.fixdesk .gap-6 { gap: 24px; }
+.fixdesk .flex-1 { flex: 1; }
+.fixdesk .flex-2 { flex: 2; }
+.fixdesk .w-full { width: 100%; }
+.fixdesk .font-bold { font-weight: 700; }
+.fixdesk .font-semibold { font-weight: 600; }
+.fixdesk .border-b { border-bottom: 1px solid var(--border); }
+.fixdesk .pb-3 { padding-bottom: 12px; }
+.fixdesk .pb-2 { padding-bottom: 8px; }
+.fixdesk .pb-1 { padding-bottom: 4px; }
+.fixdesk .mb-1 { margin-bottom: 4px; }
+.fixdesk .mb-3 { margin-bottom: 12px; }
+.fixdesk .mb-4 { margin-bottom: 16px; }
+.fixdesk .mt-4 { margin-top: 16px; }
+.fixdesk .px-6 { padding-left: 24px; padding-right: 24px; }
+.fixdesk .py-2 { padding-top: 8px; padding-bottom: 8px; }
+.fixdesk .py-3\.5 { padding-top: 14px; padding-bottom: 14px; }
+.fixdesk .rounded-lg { border-radius: 8px; }
+.fixdesk .shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
+
+.fixdesk .prescription-module .switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+.fixdesk .prescription-module .switch input {
+  opacity: 0; width: 0; height: 0;
+}
+.fixdesk .prescription-module .slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--surface-3);
+  transition: .2s; border: 1px solid var(--border);
+  border-radius: 34px;
+}
+.fixdesk .prescription-module .slider:before {
+  position: absolute; content: "";
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
+  background-color: var(--text-muted);
+  transition: .2s; border-radius: 50%;
+}
+.fixdesk .prescription-module .switch input:checked + .slider {
+  background-color: var(--teal-dim);
+  border-color: var(--teal);
+}
+.fixdesk .prescription-module .switch input:checked + .slider:before {
+  transform: translateX(22px);
+  background-color: var(--teal);
+}
+
+.fixdesk .prescription-module .grid {
+  display: grid;
+}
+.fixdesk .prescription-module .grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .fixdesk .prescription-module .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fixdesk .prescription-module .md\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.fixdesk .prescription-module .animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* ===== RESPONSIVE ===== */
-@media (max-width:980px){
-  .fixdesk .form-grid{grid-template-columns:1fr;}
-  .fixdesk .grid-2{grid-template-columns:1fr;}
-  .fixdesk .stat-grid{grid-template-columns:repeat(2,1fr);}
-  .fixdesk .menu-grid{grid-template-columns:repeat(2,1fr);}
+
+/* Large Laptops / Desktops & Medium Screens (max-width: 1200px) */
+@media (max-width: 1200px) {
+  .fixdesk .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
-@media (max-width:760px){
-  .fixdesk .app{grid-template-columns:1fr;}
-  .fixdesk .sidebar{display:none;}
-  .fixdesk .content{padding:16px 14px 90px;}
-  .fixdesk .topbar{padding:12px 14px;flex-wrap:wrap;}
-  .fixdesk .page-title{font-size:16.5px;}
-  .fixdesk .search-wrap{max-width:none;order:3;flex-basis:100%;margin-left:0;}
-  .fixdesk .stat-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
-  .fixdesk .stat-value{font-size:22px;}
-  .fixdesk .panel{padding:15px;}
-  .fixdesk .menu-grid{grid-template-columns:1fr;gap:10px;}
-  .fixdesk .menu-tile{flex-direction:row;align-items:center;padding:14px 16px;border-radius:12px;}
-  .fixdesk .menu-icon{width:38px;height:38px;flex-shrink:0;}
-  .fixdesk .menu-icon svg{width:18px;height:18px;}
-  .fixdesk .menu-title{font-size:18px;}
-  .fixdesk .ticket{flex-wrap:wrap;}
-  .fixdesk .ticket-right{flex-direction:row;align-items:center;width:100%;justify-content:space-between;margin-top:4px;}
-
-  .fixdesk .bottom-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;
-    background:rgba(26,29,38,0.95);backdrop-filter:blur(10px);
-    border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
-    justify-content:space-around;
+/* Tablets & Small Laptops (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .fixdesk .grid-2 {
+    grid-template-columns: 1fr; /* Stack columns to prevent text truncation */
+    gap: 16px;
   }
-  .fixdesk .bn-item{
-    display:flex;flex-direction:column;align-items:center;gap:3px;
-    color:var(--text-faint);font-size:9.5px;font-family:var(--font-mono);
-    padding:5px 8px;border-radius:8px;flex:1;
-    background:none;border:none;
+  .fixdesk .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  .fixdesk .bn-item svg{width:19px;height:19px;stroke-width:1.8;}
-  .fixdesk .bn-item.active{color:var(--copper);}
 }
 
-@media (max-width:420px){
-  .fixdesk .stat-grid{grid-template-columns:1fr 1fr;}
-  .fixdesk .stat-card{padding:13px 14px;}
+/* Collapsible Sidebar for Tablets specifically (768px to 1024px) */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .fixdesk .app {
+    grid-template-columns: 72px 1fr !important;
+  }
+  .fixdesk .sidebar {
+    padding: 20px 8px 16px !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  .fixdesk .brand {
+    padding: 2px 0 16px !important;
+    justify-content: center !important;
+    width: 100% !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .fixdesk .brand-text {
+    display: none !important;
+  }
+  .fixdesk .nav {
+    gap: 8px !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+  .fixdesk .nav-label {
+    display: none !important;
+  }
+  .fixdesk .nav-divider {
+    margin: 6px 0 !important;
+    width: 80% !important;
+  }
+  .fixdesk .nav-item {
+    justify-content: center !important;
+    padding: 0 !important;
+    font-size: 0 !important; /* Hide direct text children */
+    gap: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 9px !important;
+    margin: 0 auto !important;
+  }
+  .fixdesk .nav-item.active::before {
+    left: -8px !important;
+    height: 24px !important;
+  }
+  .fixdesk .nav-icon {
+    background: transparent !important;
+    margin: 0 !important;
+  }
+  .fixdesk .nav-item:hover .nav-icon,
+  .fixdesk .nav-item.active .nav-icon {
+    background: transparent !important;
+  }
+  .fixdesk .nav-item .count {
+    position: absolute !important;
+    top: 2px !important;
+    right: 2px !important;
+    font-size: 8.5px !important;
+    padding: 1px 4px !important;
+    border-radius: 10px !important;
+    margin-left: 0 !important;
+  }
+  .fixdesk .sidebar-foot {
+    justify-content: center !important;
+    padding-top: 12px !important;
+    width: 100% !important;
+  }
+  .fixdesk .sidebar-foot-text {
+    display: none !important;
+  }
+}
+
+/* Mobile Devices (max-width: 768px) */
+@media (max-width: 768px) {
+  .fixdesk .app {
+    grid-template-columns: 1fr !important;
+  }
+  .fixdesk .sidebar {
+    display: none !important;
+  }
+  .fixdesk .content {
+    padding: 16px 14px 90px !important;
+  }
+  .fixdesk .topbar {
+    padding: 12px 14px !important;
+    flex-wrap: wrap !important;
+  }
+  .fixdesk .page-title {
+    font-size: 16.5px !important;
+  }
+  .fixdesk .search-wrap {
+    max-width: none !important;
+    order: 3 !important;
+    flex-basis: 100% !important;
+    margin-left: 0 !important;
+    margin-top: 8px !important;
+  }
+  .fixdesk .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .fixdesk .stat-value {
+    font-size: 22px !important;
+  }
+  .fixdesk .panel {
+    padding: 15px !important;
+  }
+  .fixdesk .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .fixdesk .menu-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .fixdesk .menu-tile {
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 14px 16px !important;
+    border-radius: 12px !important;
+    gap: 12px !important;
+  }
+  .fixdesk .menu-icon {
+    width: 38px !important;
+    height: 38px !important;
+    flex-shrink: 0 !important;
+  }
+  .fixdesk .menu-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .fixdesk .menu-title {
+    font-size: 18px !important;
+  }
+  .fixdesk .ticket {
+    flex-wrap: wrap !important;
+  }
+  .fixdesk .ticket-right {
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    margin-top: 4px !important;
+  }
+
+  .fixdesk .bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 40 !important;
+    background: rgba(26, 29, 38, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)) !important;
+    justify-content: space-around !important;
+  }
+  .fixdesk .bn-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 3px !important;
+    color: var(--text-faint) !important;
+    font-size: 9.5px !important;
+    font-family: var(--font-mono) !important;
+    padding: 5px 8px !important;
+    border-radius: 8px !important;
+    flex: 1 !important;
+    background: none !important;
+    border: none !important;
+  }
+  .fixdesk .bn-item svg {
+    width: 19px !important;
+    height: 19px !important;
+    stroke-width: 1.8 !important;
+  }
+  .fixdesk .bn-item.active {
+    color: var(--copper) !important;
+  }
+}
+
+/* Small Mobile Screen Adjustments (max-width: 480px) */
+@media (max-width: 480px) {
+  .fixdesk .stat-grid {
+    grid-template-columns: 1fr !important; /* Stack stats vertically for very small devices */
+  }
+  .fixdesk .stat-card {
+    padding: 13px 14px !important;
+  }
+  .fixdesk .page-title {
+    font-size: 15px !important;
+  }
+  .fixdesk .page-sub {
+    font-size: 10px !important;
+  }
+}
+
+/* ===== CUSTOM BUTTONS ===== */
+.fixdesk .btn-dark-green {
+  background: #166534 !important;
+  color: #ffffff !important;
+  border: 1px solid #14532d !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+
+.fixdesk .btn-dark-green:hover {
+  background: #15803d !important;
+  transform: translateY(-1px) !important;
+}
+
+.fixdesk .btn-dark-green:active {
+  background: #14532d !important;
+  transform: translateY(0) !important;
+}
+
+/* ===== REPAIR FORM CUSTOM STYLES ===== */
+.fixdesk .repair-field-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.fixdesk .repair-field-group svg {
+  position: absolute;
+  left: 14px;
+  color: var(--text-faint);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.fixdesk .repair-field-group input,
+.fixdesk .repair-field-group textarea,
+.fixdesk .repair-field-group select {
+  width: 100%;
+  padding: 12px 14px 12px 42px !important;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fixdesk .repair-field-group input:focus,
+.fixdesk .repair-field-group textarea:focus,
+.fixdesk .repair-field-group select:focus {
+  border-color: #166534;
+  box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
+}
+
+/* Date picker click optimization: hide browser indicator, make entire field clickable */
+.fixdesk .repair-field-group input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 20;
 }
