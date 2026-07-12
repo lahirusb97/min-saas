@@ -24,6 +24,21 @@ export class FramesController {
     return this.framesService.findAll(user.id);
   }
 
+  @Get('brands')
+  listBrands(@CurrentUser() user: AuthUser) {
+    return this.framesService.listBrands(user.id);
+  }
+
+  @Get('models')
+  listModels(@CurrentUser() user: AuthUser) {
+    return this.framesService.listModels(user.id);
+  }
+
+  @Get('colors')
+  listColors(@CurrentUser() user: AuthUser) {
+    return this.framesService.listColors(user.id);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.framesService.findOne(user.id, id);

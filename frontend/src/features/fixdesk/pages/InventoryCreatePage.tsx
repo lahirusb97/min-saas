@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { Check } from 'lucide-react'
@@ -23,6 +23,18 @@ export function InventoryCreatePage() {
   const frameTypeRef = useRef<HTMLSelectElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [brandOptions, setBrandOptions] = useState<string[]>([])
+  const [modelOptions, setModelOptions] = useState<string[]>([])
+  const [colorOptions, setColorOptions] = useState<string[]>([])
+
+  const isFrames = group?.slug === 'frames'
+
+  useEffect(() => {
+    if (!isFrames) return
+    frameService.listBrands().then(setBrandOptions)
+    frameService.listModels().then(setModelOptions)
+    frameService.listColors().then(setColorOptions)
+  }, [isFrames])
 
   if (!group) {
     return <Navigate to="/dashboard/inventory" replace />
@@ -31,7 +43,6 @@ export function InventoryCreatePage() {
   const categories = group.categories as readonly string[]
   const label = group.label
   const slug = group.slug
-  const isFrames = slug === 'frames'
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -100,15 +111,30 @@ export function InventoryCreatePage() {
             <>
               <div className="field">
                 <label>Brand</label>
-                <input ref={brandRef} placeholder="e.g. Ray-Ban" />
+                <input ref={brandRef} list="brand-options" placeholder="e.g. Ray-Ban" autoComplete="off" />
+                <datalist id="brand-options">
+                  {brandOptions.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
               </div>
               <div className="field">
                 <label>Model Number</label>
-                <input ref={modelNumberRef} placeholder="e.g. RB5024" />
+                <input ref={modelNumberRef} list="model-options" placeholder="e.g. RB5024" autoComplete="off" />
+                <datalist id="model-options">
+                  {modelOptions.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
               </div>
               <div className="field">
                 <label>Color</label>
-                <input ref={colorRef} placeholder="e.g. Black" />
+                <input ref={colorRef} list="color-options" placeholder="e.g. Black" autoComplete="off" />
+                <datalist id="color-options">
+                  {colorOptions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </div>
               <div className="field">
                 <label>Type</label>

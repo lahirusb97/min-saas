@@ -1,13 +1,18 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Branch } from '../../auth/entities/branch.entity';
+import { Brand } from './brand.entity';
 
 @Entity('frames')
 export class Frame {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
-  brand!: string;
+  @ManyToOne(() => Brand)
+  @JoinColumn({ name: 'brandId' })
+  brand!: Brand;
+
+  @Column({ type: 'int' })
+  brandId!: number;
 
   @Column()
   modelNumber!: string;

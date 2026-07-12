@@ -3,10 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FramesController } from './frames.controller';
 import { FramesService } from './frames.service';
 import { Frame } from './entities/frame.entity';
+import { Brand } from './entities/brand.entity';
 import { Branch } from '../auth/entities/branch.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Frame, Branch])],
+  imports: [TypeOrmModule.forFeature([Frame, Brand, Branch])],
   controllers: [FramesController],
   providers: [FramesService],
 })
