@@ -30,7 +30,7 @@ export function InventoryListPage() {
     return <Navigate to="/dashboard/inventory" replace />
   }
 
-  async function handleDeleteFrame(id: string) {
+  async function handleDeleteFrame(id: number) {
     await frameService.remove(id)
     setFrames((prev) => prev.filter((f) => f.id !== id))
     showToast('Frame removed')
@@ -115,6 +115,7 @@ export function InventoryListPage() {
   const categories = group.categories as readonly string[]
   const items = db.inventory.filter((i) => categories.includes(i.category))
   const list = filter === 'low' ? items.filter((i) => i.qty <= i.threshold) : items
+  const isLenses = group.slug === 'lenses'
 
   return (
     <div className="panel">
@@ -140,7 +141,7 @@ export function InventoryListPage() {
           <thead>
             <tr>
               <th>Item</th>
-              <th>Category</th>
+              {isLenses ? <th>Details</th> : <th>Category</th>}
               <th>Qty</th>
               <th>Unit Price</th>
               <th>Value</th>
@@ -151,9 +152,17 @@ export function InventoryListPage() {
               list.map((i) => (
                 <tr key={i.id}>
                   <td>{i.name}</td>
-                  <td>
-                    <span className="cat-pill">{i.category}</span>
-                  </td>
+                  {isLenses ? (
+                    <td>
+                      <span className="text-muted-foreground text-xs">
+                        {[i.lensType, i.lensCoating, i.lensFactory].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </td>
+                  ) : (
+                    <td>
+                      <span className="cat-pill">{i.category}</span>
+                    </td>
+                  )}
                   <td>
                     <span className={`qty-pill ${i.qty <= i.threshold ? 'qty-low' : 'qty-ok'}`}>{i.qty}</span>
                   </td>

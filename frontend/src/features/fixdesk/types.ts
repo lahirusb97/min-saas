@@ -107,6 +107,9 @@ export interface InventoryItem {
   modelNumber?: string
   color?: string
   frameType?: string
+  lensType?: string
+  lensCoating?: string
+  lensFactory?: string
 }
 
 export interface ShopSettings {
@@ -162,3 +165,7 @@ export const INVENTORY_GROUPS = {
 export type InventoryGroupSlug = keyof typeof INVENTORY_GROUPS
 
 export const FRAME_TYPES = ['Full Rim', 'Half Rim', 'Rimless']
+
+export const LENS_TYPES = ['Single Vision', 'Bifocal', 'Progressive', 'Photochromic']
+
+export const LENS_COATINGS = ['Anti-Glare', 'Blue Cut', 'UV Protection', 'Scratch Resistant']

@@ -4,7 +4,7 @@ import { api } from '@/lib/axios'
 import { clearToken, getToken, setToken } from '@/lib/auth'
 
 interface AuthUser {
-  id: string
+  id: number
   shopName: string
   contactNumber: string
   role: string
@@ -16,7 +16,6 @@ interface LoginInput {
 }
 
 interface RegisterInput {
-  shopName: string
   contactNumber: string
   password: string
 }

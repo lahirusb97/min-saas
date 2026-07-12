@@ -1,10 +1,10 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { User } from './user.entity';
+import { Organization } from './organization.entity';
 
 @Entity('branches')
 export class Branch {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @Column()
   name!: string;
@@ -12,12 +12,12 @@ export class Branch {
   @Column()
   contactNumber!: string;
 
-  @ManyToOne(() => User, (user) => user.branches)
-  @JoinColumn({ name: 'ownerId' })
-  owner!: User;
+  @ManyToOne(() => Organization, (organization) => organization.branches)
+  @JoinColumn({ name: 'organizationId' })
+  organization!: Organization;
 
-  @Column()
-  ownerId!: string;
+  @Column({ type: 'int' })
+  organizationId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;

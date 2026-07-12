@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './entities/user.entity';
+import { Organization } from './entities/organization.entity';
 import { Branch } from './entities/branch.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -12,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
+    @InjectRepository(Organization) private readonly organizationsRepository: Repository<Organization>,
     @InjectRepository(Branch) private readonly branchesRepository: Repository<Branch>,
     private readonly jwtService: JwtService,
   ) {}
@@ -24,19 +26,27 @@ export class AuthService {
       throw new ConflictException('Contact number is already registered');
     }
 
+    const organizationName = 'Organization 1';
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = this.usersRepository.create({
-      shopName: dto.shopName,
+      shopName: organizationName,
       contactNumber: dto.contactNumber,
       password: hashedPassword,
       role: UserRole.ADMIN,
     });
     await this.usersRepository.save(user);
 
-    const branch = this.branchesRepository.create({
-      name: dto.shopName,
-      contactNumber: dto.contactNumber,
+    const organization = this.organizationsRepository.create({
+      name: organizationName,
       ownerId: user.id,
+    });
+    await this.organizationsRepository.save(organization);
+
+    const branch = this.branchesRepository.create({
+      name: organizationName,
+      contactNumber: dto.contactNumber,
+      organizationId: organization.id,
     });
     await this.branchesRepository.save(branch);
 

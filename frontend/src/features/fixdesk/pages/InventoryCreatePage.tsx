@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { Check } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { useInventoryGroup } from '../hooks/useInventoryGroup'
-import { FRAME_TYPES } from '../types'
+import { FRAME_TYPES, LENS_TYPES, LENS_COATINGS } from '../types'
 import { frameService } from '../services/frameService'
 
 export function InventoryCreatePage() {
@@ -21,6 +21,9 @@ export function InventoryCreatePage() {
   const modelNumberRef = useRef<HTMLInputElement>(null)
   const colorRef = useRef<HTMLInputElement>(null)
   const frameTypeRef = useRef<HTMLSelectElement>(null)
+  const lensTypeRef = useRef<HTMLSelectElement>(null)
+  const lensCoatingRef = useRef<HTMLSelectElement>(null)
+  const lensFactoryRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [brandOptions, setBrandOptions] = useState<string[]>([])
@@ -28,6 +31,7 @@ export function InventoryCreatePage() {
   const [colorOptions, setColorOptions] = useState<string[]>([])
 
   const isFrames = group?.slug === 'frames'
+  const isLenses = group?.slug === 'lenses'
 
   useEffect(() => {
     if (!isFrames) return
@@ -77,6 +81,11 @@ export function InventoryCreatePage() {
       qty: Number(qtyRef.current!.value || 0),
       price: Number(priceRef.current!.value || 0),
       threshold: Number(thresholdRef.current!.value || 5),
+      ...(isLenses && {
+        lensType: lensTypeRef.current!.value,
+        lensCoating: lensCoatingRef.current!.value,
+        lensFactory: lensFactoryRef.current!.value.trim(),
+      }),
     })
     formRef.current?.reset()
     if (thresholdRef.current) thresholdRef.current.value = '5'
@@ -143,6 +152,30 @@ export function InventoryCreatePage() {
                     <option key={t}>{t}</option>
                   ))}
                 </select>
+              </div>
+            </>
+          )}
+          {isLenses && (
+            <>
+              <div className="field">
+                <label>Type</label>
+                <select ref={lensTypeRef} defaultValue={LENS_TYPES[0]}>
+                  {LENS_TYPES.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Coating</label>
+                <select ref={lensCoatingRef} defaultValue={LENS_COATINGS[0]}>
+                  {LENS_COATINGS.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Factory Name</label>
+                <input ref={lensFactoryRef} placeholder="e.g. Essilor" />
               </div>
             </>
           )}

@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 function Register() {
   const navigate = useNavigate()
   const { register } = useAuth()
-  const [shopName, setShopName] = useState('')
   const [contactNumber, setContactNumber] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +21,7 @@ function Register() {
     setError(null)
     setLoading(true)
     try {
-      await register({ shopName, contactNumber, password })
+      await register({ contactNumber, password })
       navigate('/dashboard')
     } catch (err) {
       const message = isAxiosError(err) ? err.response?.data?.message : null
@@ -41,16 +40,6 @@ function Register() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-1.5">
-              <Label htmlFor="shopName">Optical shop name</Label>
-              <Input
-                id="shopName"
-                type="text"
-                required
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-              />
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="contactNumber">Contact number</Label>
               <Input

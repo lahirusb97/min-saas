@@ -7,7 +7,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 
 interface JwtPayload {
-  sub: string;
+  sub: number;
 }
 
 @Injectable()

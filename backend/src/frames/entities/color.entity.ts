@@ -1,8 +1,8 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Branch } from '../../auth/entities/branch.entity';
+import { Organization } from '../../auth/entities/organization.entity';
 
 @Entity('colors')
-@Index(['branchId', 'name'], { unique: true })
+@Index(['organizationId', 'name'], { unique: true })
 export class Color {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -10,12 +10,12 @@ export class Color {
   @Column()
   name!: string;
 
-  @ManyToOne(() => Branch)
-  @JoinColumn({ name: 'branchId' })
-  branch!: Branch;
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organizationId' })
+  organization!: Organization;
 
-  @Column()
-  branchId!: string;
+  @Column({ type: 'int' })
+  organizationId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;

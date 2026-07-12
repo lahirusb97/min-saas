@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Branch } from './branch.entity';
+import { Organization } from './organization.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -8,8 +8,8 @@ export enum UserRole {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @Column()
   shopName!: string;
@@ -23,8 +23,8 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.ADMIN })
   role!: UserRole;
 
-  @OneToMany(() => Branch, (branch) => branch.owner)
-  branches!: Branch[];
+  @OneToMany(() => Organization, (organization) => organization.owner)
+  organizations!: Organization[];
 
   @CreateDateColumn()
   createdAt!: Date;

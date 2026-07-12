@@ -1,12 +1,12 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { Branch } from '../../auth/entities/branch.entity';
+import { Organization } from '../../auth/entities/organization.entity';
 import { Brand } from './brand.entity';
 import { Color } from './color.entity';
 
 @Entity('frames')
 export class Frame {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @ManyToOne(() => Brand)
   @JoinColumn({ name: 'brandId' })
@@ -28,21 +28,12 @@ export class Frame {
   @Column({ nullable: true })
   frameType?: string;
 
-  @Column({ type: 'int', default: 0 })
-  qty!: number;
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organizationId' })
+  organization!: Organization;
 
-  @Column({ type: 'int', default: 0 })
-  price!: number;
-
-  @Column({ type: 'int', default: 5 })
-  threshold!: number;
-
-  @ManyToOne(() => Branch)
-  @JoinColumn({ name: 'branchId' })
-  branch!: Branch;
-
-  @Column()
-  branchId!: string;
+  @Column({ type: 'int' })
+  organizationId!: number;
 
   @CreateDateColumn()
   createdAt!: Date;

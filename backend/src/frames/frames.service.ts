@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 import { Frame } from './entities/frame.entity';
 import { Brand } from './entities/brand.entity';
 import { Color } from './entities/color.entity';
+import { Stock } from './entities/stock.entity';
 import { Branch } from '../auth/entities/branch.entity';
+import { Organization } from '../auth/entities/organization.entity';
 import { CreateFrameDto } from './dto/create-frame.dto';
 import { UpdateFrameDto } from './dto/update-frame.dto';
 
@@ -23,150 +25,218 @@ function dedupeByNormalizedName(values: string[]) {
   return [...seen.values()];
 }
 
+interface Context {
+  organizationId: number;
+  branchId: number;
+}
+
 @Injectable()
 export class FramesService {
   constructor(
     @InjectRepository(Frame) private readonly framesRepository: Repository<Frame>,
     @InjectRepository(Brand) private readonly brandsRepository: Repository<Brand>,
     @InjectRepository(Color) private readonly colorsRepository: Repository<Color>,
+    @InjectRepository(Stock) private readonly stocksRepository: Repository<Stock>,
     @InjectRepository(Branch) private readonly branchesRepository: Repository<Branch>,
+    @InjectRepository(Organization) private readonly organizationsRepository: Repository<Organization>,
   ) {}
 
-  private async getBranchId(userId: string) {
-    const branch = await this.branchesRepository.findOne({ where: { ownerId: userId } });
+  private async getContext(userId: number): Promise<Context> {
+    const organization = await this.organizationsRepository.findOne({ where: { ownerId: userId } });
+    if (!organization) {
+      throw new NotFoundException('No organization found for this account');
+    }
+    const branch = await this.branchesRepository.findOne({ where: { organizationId: organization.id } });
     if (!branch) {
       throw new NotFoundException('No branch found for this account');
     }
-    return branch.id;
+    return { organizationId: organization.id, branchId: branch.id };
   }
 
-  private async getOrCreateBrand(branchId: string, name: string): Promise<number> {
+  private async getOrCreateBrand(organizationId: number, name: string): Promise<number> {
     const trimmed = name.trim();
     const target = normalizeName(trimmed);
-    const brandsInBranch = await this.brandsRepository.find({ where: { branchId } });
-    const existing = brandsInBranch.find((b) => normalizeName(b.name) === target);
+    const brandsInOrg = await this.brandsRepository.find({ where: { organizationId } });
+    const existing = brandsInOrg.find((b) => normalizeName(b.name) === target);
     if (existing) {
       return existing.id;
     }
-    const created = await this.brandsRepository.save(this.brandsRepository.create({ branchId, name: trimmed }));
+    const created = await this.brandsRepository.save(this.brandsRepository.create({ organizationId, name: trimmed }));
     return created.id;
   }
 
-  private async getOrCreateColor(branchId: string, name: string): Promise<number | undefined> {
+  private async getOrCreateColor(organizationId: number, name: string): Promise<number | undefined> {
     const trimmed = name.trim();
     if (!trimmed) {
       return undefined;
     }
     const target = normalizeName(trimmed);
-    const colorsInBranch = await this.colorsRepository.find({ where: { branchId } });
-    const existing = colorsInBranch.find((c) => normalizeName(c.name) === target);
+    const colorsInOrg = await this.colorsRepository.find({ where: { organizationId } });
+    const existing = colorsInOrg.find((c) => normalizeName(c.name) === target);
     if (existing) {
       return existing.id;
     }
-    const created = await this.colorsRepository.save(this.colorsRepository.create({ branchId, name: trimmed }));
+    const created = await this.colorsRepository.save(this.colorsRepository.create({ organizationId, name: trimmed }));
     return created.id;
   }
 
-  private async resolveModelNumber(branchId: string, modelNumber: string): Promise<string> {
-    const trimmed = modelNumber.trim();
-    const target = normalizeName(trimmed);
-    const existingModels = await this.listModelsForBranch(branchId);
-    const existing = existingModels.find((m) => normalizeName(m) === target);
-    return existing ?? trimmed;
-  }
-
-  private async listModelsForBranch(branchId: string) {
+  private async listModelsForOrg(organizationId: number) {
     const rows = await this.framesRepository
       .createQueryBuilder('frame')
       .select('DISTINCT frame.modelNumber', 'modelNumber')
-      .where('frame.branchId = :branchId', { branchId })
+      .where('frame.organizationId = :organizationId', { organizationId })
       .getRawMany<{ modelNumber: string }>();
     return dedupeByNormalizedName(rows.map((r) => r.modelNumber).filter(Boolean));
   }
 
-  private toResponse(frame: Frame) {
-    const { brand, color, ...rest } = frame;
-    return { ...rest, brand: brand.name, color: color?.name };
-  }
+  private async getOrCreateFrame(
+    organizationId: number,
+    brandId: number,
+    modelNumber: string,
+    colorId: number | undefined,
+    frameType: string | undefined,
+  ): Promise<Frame> {
+    const trimmedModel = modelNumber.trim();
+    const targetModel = normalizeName(trimmedModel);
+    const trimmedType = frameType?.trim();
+    const targetType = trimmedType ? normalizeName(trimmedType) : undefined;
 
-  async create(userId: string, dto: CreateFrameDto) {
-    const branchId = await this.getBranchId(userId);
-    const brandId = await this.getOrCreateBrand(branchId, dto.brand);
-    const modelNumber = await this.resolveModelNumber(branchId, dto.modelNumber);
-    const colorId = dto.color ? await this.getOrCreateColor(branchId, dto.color) : undefined;
-    const { brand: _brand, modelNumber: _modelNumber, color: _color, ...rest } = dto;
-    const frame = this.framesRepository.create({ ...rest, modelNumber, brandId, colorId, branchId });
-    const saved = await this.framesRepository.save(frame);
-    return this.toResponse(
-      await this.framesRepository.findOneOrFail({ where: { id: saved.id }, relations: { brand: true, color: true } }),
-    );
-  }
-
-  async findAll(userId: string) {
-    const branchId = await this.getBranchId(userId);
-    const frames = await this.framesRepository.find({
-      where: { branchId },
+    const candidates = await this.framesRepository.find({
+      where: { organizationId, brandId },
       relations: { brand: true, color: true },
+    });
+    const existing = candidates.find(
+      (f) =>
+        normalizeName(f.modelNumber) === targetModel &&
+        (f.colorId ?? null) === (colorId ?? null) &&
+        (f.frameType ? normalizeName(f.frameType) : undefined) === targetType,
+    );
+    if (existing) {
+      return existing;
+    }
+
+    const created = this.framesRepository.create({
+      organizationId,
+      brandId,
+      modelNumber: trimmedModel,
+      colorId,
+      frameType: trimmedType || undefined,
+    });
+    const saved = await this.framesRepository.save(created);
+    return this.framesRepository.findOneOrFail({ where: { id: saved.id }, relations: { brand: true, color: true } });
+  }
+
+  private async upsertStock(branchId: number, frameId: number, qty: number, price: number, threshold: number) {
+    const existing = await this.stocksRepository.findOne({ where: { branchId, frameId } });
+    if (existing) {
+      existing.qty += qty;
+      existing.price = price;
+      existing.threshold = threshold;
+      return this.stocksRepository.save(existing);
+    }
+    const created = this.stocksRepository.create({ branchId, frameId, qty, price, threshold });
+    return this.stocksRepository.save(created);
+  }
+
+  private toResponse(stock: Stock) {
+    const frame = stock.frame;
+    return {
+      id: stock.id,
+      frameId: frame.id,
+      brand: frame.brand.name,
+      modelNumber: frame.modelNumber,
+      color: frame.color?.name,
+      frameType: frame.frameType,
+      qty: stock.qty,
+      price: stock.price,
+      threshold: stock.threshold,
+      branchId: stock.branchId,
+      createdAt: stock.createdAt,
+      updatedAt: stock.updatedAt,
+    };
+  }
+
+  async create(userId: number, dto: CreateFrameDto) {
+    const { organizationId, branchId } = await this.getContext(userId);
+    const brandId = await this.getOrCreateBrand(organizationId, dto.brand);
+    const colorId = dto.color ? await this.getOrCreateColor(organizationId, dto.color) : undefined;
+    const frame = await this.getOrCreateFrame(organizationId, brandId, dto.modelNumber, colorId, dto.frameType);
+    const stock = await this.upsertStock(branchId, frame.id, dto.qty, dto.price, dto.threshold ?? 5);
+    return this.toResponse({ ...stock, frame });
+  }
+
+  async findAll(userId: number) {
+    const { branchId } = await this.getContext(userId);
+    const stocks = await this.stocksRepository.find({
+      where: { branchId },
+      relations: { frame: { brand: true, color: true } },
       order: { createdAt: 'DESC' },
     });
-    return frames.map((frame) => this.toResponse(frame));
+    return stocks.map((stock) => this.toResponse(stock));
   }
 
-  private async findOneEntity(userId: string, id: string) {
-    const branchId = await this.getBranchId(userId);
-    const frame = await this.framesRepository.findOne({
+  private async findOneStock(userId: number, id: number) {
+    const { branchId } = await this.getContext(userId);
+    const stock = await this.stocksRepository.findOne({
       where: { id, branchId },
-      relations: { brand: true, color: true },
+      relations: { frame: { brand: true, color: true } },
     });
-    if (!frame) {
+    if (!stock) {
       throw new NotFoundException('Frame not found');
     }
-    return frame;
+    return stock;
   }
 
-  async findOne(userId: string, id: string) {
-    return this.toResponse(await this.findOneEntity(userId, id));
+  async findOne(userId: number, id: number) {
+    return this.toResponse(await this.findOneStock(userId, id));
   }
 
-  async update(userId: string, id: string, dto: UpdateFrameDto) {
-    const frame = await this.findOneEntity(userId, id);
-    const { brand, modelNumber, color, ...rest } = dto;
-    Object.assign(frame, rest);
-    if (brand) {
-      frame.brandId = await this.getOrCreateBrand(frame.branchId, brand);
+  async update(userId: number, id: number, dto: UpdateFrameDto) {
+    const stock = await this.findOneStock(userId, id);
+    const { organizationId } = await this.getContext(userId);
+    const { brand, modelNumber, color, frameType, qty, price, threshold } = dto;
+
+    const needsNewFrame = brand !== undefined || modelNumber !== undefined || color !== undefined || frameType !== undefined;
+    if (needsNewFrame) {
+      const brandId = brand ? await this.getOrCreateBrand(organizationId, brand) : stock.frame.brandId;
+      const colorId = color !== undefined ? await this.getOrCreateColor(organizationId, color) : stock.frame.colorId;
+      const resolvedModelNumber = modelNumber ?? stock.frame.modelNumber;
+      const resolvedFrameType = frameType ?? stock.frame.frameType;
+      const frame = await this.getOrCreateFrame(organizationId, brandId, resolvedModelNumber, colorId, resolvedFrameType);
+      stock.frameId = frame.id;
+      stock.frame = frame;
     }
-    if (modelNumber) {
-      frame.modelNumber = await this.resolveModelNumber(frame.branchId, modelNumber);
-    }
-    if (color) {
-      frame.colorId = await this.getOrCreateColor(frame.branchId, color);
-    }
-    const saved = await this.framesRepository.save(frame);
+
+    if (qty !== undefined) stock.qty = qty;
+    if (price !== undefined) stock.price = price;
+    if (threshold !== undefined) stock.threshold = threshold;
+
+    const saved = await this.stocksRepository.save(stock);
     return this.toResponse(
-      await this.framesRepository.findOneOrFail({ where: { id: saved.id }, relations: { brand: true, color: true } }),
+      await this.stocksRepository.findOneOrFail({ where: { id: saved.id }, relations: { frame: { brand: true, color: true } } }),
     );
   }
 
-  async remove(userId: string, id: string) {
-    const frame = await this.findOneEntity(userId, id);
-    await this.framesRepository.remove(frame);
+  async remove(userId: number, id: number) {
+    const stock = await this.findOneStock(userId, id);
+    await this.stocksRepository.remove(stock);
     return { id };
   }
 
-  async listBrands(userId: string) {
-    const branchId = await this.getBranchId(userId);
-    const brands = await this.brandsRepository.find({ where: { branchId }, order: { name: 'ASC' } });
+  async listBrands(userId: number) {
+    const { organizationId } = await this.getContext(userId);
+    const brands = await this.brandsRepository.find({ where: { organizationId }, order: { name: 'ASC' } });
     return brands.map((b) => b.name);
   }
 
-  async listModels(userId: string) {
-    const branchId = await this.getBranchId(userId);
-    return this.listModelsForBranch(branchId);
+  async listModels(userId: number) {
+    const { organizationId } = await this.getContext(userId);
+    return this.listModelsForOrg(organizationId);
   }
 
-  async listColors(userId: string) {
-    const branchId = await this.getBranchId(userId);
-    const colors = await this.colorsRepository.find({ where: { branchId }, order: { name: 'ASC' } });
+  async listColors(userId: number) {
+    const { organizationId } = await this.getContext(userId);
+    const colors = await this.colorsRepository.find({ where: { organizationId }, order: { name: 'ASC' } });
     return colors.map((c) => c.name);
   }
 }
