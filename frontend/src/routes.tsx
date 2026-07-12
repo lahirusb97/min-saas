@@ -9,6 +9,7 @@ import { RepairPage } from './features/fixdesk/pages/RepairPage'
 import { AccessoriesPage } from './features/fixdesk/pages/AccessoriesPage'
 import { InventoryPage } from './features/fixdesk/pages/InventoryPage'
 import { SettingsPage } from './features/fixdesk/pages/SettingsPage'
+import { SearchPage } from './features/fixdesk/pages/SearchPage'
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { path: 'accessories', element: <AccessoriesPage /> },
       { path: 'inventory', element: <InventoryPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'search', element: <SearchPage /> },
     ],
   },
 ])

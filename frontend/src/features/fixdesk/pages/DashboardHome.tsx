@@ -1,9 +1,5 @@
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { UserPlus, Wrench, Layers, Boxes, Search, Settings } from 'lucide-react'
-
-interface DashboardOutletContext {
-  focusSearch: () => void
-}
 
 const TILES = [
   { path: 'customer', label: 'New Customer', desc: 'Add a customer record', icon: UserPlus, color: '232,163,61', stroke: 'var(--copper)' },
@@ -14,7 +10,6 @@ const TILES = [
 
 export function DashboardHome() {
   const navigate = useNavigate()
-  const { focusSearch } = useOutletContext<DashboardOutletContext>()
 
   return (
     <section>
@@ -33,7 +28,7 @@ export function DashboardHome() {
           </button>
         ))}
 
-        <button type="button" className="menu-tile" onClick={focusSearch}>
+        <button type="button" className="menu-tile" onClick={() => navigate('search')}>
           <span className="menu-icon" style={{ background: 'rgba(107,203,119,0.14)' }}>
             <Search stroke="var(--success)" strokeWidth={1.7} />
           </span>

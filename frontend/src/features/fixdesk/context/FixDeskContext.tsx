@@ -29,6 +29,8 @@ interface FixDeskContextValue {
   addInventoryItem: (input: Omit<InventoryItem, 'id'>) => void
   addPrescription: (input: Omit<Prescription, 'id' | 'serialNo' | 'createdAt'>) => Prescription
   updateSettings: (settings: ShopSettings) => void
+  updateJobStatus: (type: 'Prescr.' | 'Repair' | 'Access.', id: number, nextStatus: 'Pending' | 'Delivered' | 'Cancelled') => void
+  deleteJob: (type: 'Prescr.' | 'Repair' | 'Access.', id: number) => void
   toast: string | null
   showToast: (msg: string) => void
 }
@@ -142,9 +144,51 @@ export function FixDeskProvider({ children }: { children: ReactNode }) {
     setDb((prev) => ({ ...prev, settings }))
   }, [])
 
+  const updateJobStatus = useCallback((type: 'Prescr.' | 'Repair' | 'Access.', id: number, nextStatus: 'Pending' | 'Delivered' | 'Cancelled') => {
+    setDb((prev) => {
+      if (type === 'Prescr.') {
+        return {
+          ...prev,
+          prescriptions: prev.prescriptions.map(p => p.id === id ? { ...p, status: nextStatus } : p)
+        }
+      } else if (type === 'Repair') {
+        return {
+          ...prev,
+          repairJobs: prev.repairJobs.map(r => r.id === id ? { ...r, status: nextStatus } : r)
+        }
+      } else {
+        return {
+          ...prev,
+          accJobs: prev.accJobs.map(a => a.id === id ? { ...a, status: nextStatus } : a)
+        }
+      }
+    })
+  }, [])
+
+  const deleteJob = useCallback((type: 'Prescr.' | 'Repair' | 'Access.', id: number) => {
+    setDb((prev) => {
+      if (type === 'Prescr.') {
+        return {
+          ...prev,
+          prescriptions: prev.prescriptions.filter(p => p.id !== id)
+        }
+      } else if (type === 'Repair') {
+        return {
+          ...prev,
+          repairJobs: prev.repairJobs.filter(r => r.id !== id)
+        }
+      } else {
+        return {
+          ...prev,
+          accJobs: prev.accJobs.filter(a => a.id !== id)
+        }
+      }
+    })
+  }, [])
+
   const value = useMemo(
-    () => ({ db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, toast, showToast }),
-    [db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, toast, showToast],
+    () => ({ db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, updateJobStatus, deleteJob, toast, showToast }),
+    [db, addCustomer, addRepairJob, addAccJob, addInventoryItem, addPrescription, updateSettings, updateJobStatus, deleteJob, toast, showToast],
   )
 
   return <FixDeskContext.Provider value={value}>{children}</FixDeskContext.Provider>

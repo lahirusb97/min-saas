@@ -956,3 +956,27 @@
   cursor: pointer;
   z-index: 20;
 }
+
+/* ===== SEARCH FILTERS RESPONSIVE STYLES ===== */
+@media (max-width: 768px) {
+  .fixdesk .search-filters-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+  .fixdesk .search-filters-row > div {
+    width: 100% !important;
+  }
+  .fixdesk .search-filters-row .custom-dropdown-container {
+    min-width: 0 !important;
+  }
+  .fixdesk .search-filters-row .custom-dropdown-trigger {
+    width: 100% !important;
+  }
+  .fixdesk .search-filters-row .order-type-filter-group > div {
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+

@@ -39,19 +39,15 @@ function DashboardShell() {
     localStorage.setItem('fixdesk-theme', nextTheme)
   }
 
-  function focusSearch() {
-    searchInputRef.current?.focus()
-    searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
 
   return (
     <div className={`fixdesk ${theme === 'light' ? 'light-theme' : ''}`}>
       <div className="app">
-        <Sidebar onSearchClick={focusSearch} />
+        <Sidebar />
         <main className="main">
           <Topbar view={view} searchInputRef={searchInputRef} theme={theme} onToggleTheme={toggleTheme} />
           <div className="content">
-            <Outlet context={{ focusSearch }} />
+            <Outlet />
           </div>
         </main>
       </div>

@@ -1,6 +1,6 @@
-export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Delivered'
+export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Delivered' | 'Cancelled'
 
-export const JOB_STATUSES: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Delivered']
+export const JOB_STATUSES: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Delivered', 'Cancelled']
 
 export interface Customer {
   id: number
@@ -65,6 +65,7 @@ export interface Prescription {
   payment: number
   balance: number
   dueDate?: string
+  status?: 'Pending' | 'Delivered' | 'Cancelled'
 }
 
 export interface RepairJob {

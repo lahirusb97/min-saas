@@ -3,7 +3,7 @@ import { Wrench, Search, Settings, LayoutDashboard as DashboardIcon } from 'luci
 import { NAV_ITEMS } from './nav'
 import { useFixDesk } from '../context/FixDeskContext'
 
-export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
+export function Sidebar() {
   const { db } = useFixDesk()
   const activeRepairCount = db.repairJobs.filter((j) => j.status !== 'Delivered').length
   const activeAccCount = db.accJobs.filter((j) => j.status !== 'Delivered').length
@@ -42,12 +42,12 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
 
         <div className="nav-divider" />
 
-        <button type="button" className="nav-item" onClick={onSearchClick}>
+        <NavLink to="search" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
           <span className="nav-icon">
             <Search />
           </span>
           Search
-        </button>
+        </NavLink>
         <NavLink to="settings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
           <span className="nav-icon">
             <Settings />
