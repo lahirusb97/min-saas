@@ -5,6 +5,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { FramesModule } from './frames/frames.module';
+import { LensesModule } from './lenses/lenses.module';
+import { AccessoriesModule } from './accessories/accessories.module';
+import { CustomersModule } from './customers/customers.module';
+import { VisionTestsModule } from './vision-tests/vision-tests.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -24,6 +29,11 @@ import { FramesModule } from './frames/frames.module';
     }),
     AuthModule,
     FramesModule,
+    LensesModule,
+    AccessoriesModule,
+    CustomersModule,
+    VisionTestsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

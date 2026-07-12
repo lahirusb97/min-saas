@@ -66,6 +66,10 @@ export interface Prescription {
   balance: number
   dueDate?: string
   status?: 'Pending' | 'Delivered' | 'Cancelled'
+
+  // Backend linkage (set once this order is persisted to the API)
+  backendOrderId?: number
+  backendCustomerId?: number
 }
 
 export interface RepairJob {

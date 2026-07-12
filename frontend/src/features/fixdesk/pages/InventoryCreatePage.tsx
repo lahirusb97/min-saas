@@ -6,6 +6,8 @@ import { useFixDesk } from '../context/FixDeskContext'
 import { useInventoryGroup } from '../hooks/useInventoryGroup'
 import { FRAME_TYPES, LENS_TYPES, LENS_COATINGS } from '../types'
 import { frameService } from '../services/frameService'
+import { lensService } from '../services/lensService'
+import { accessoryService } from '../services/accessoryService'
 
 export function InventoryCreatePage() {
   const group = useInventoryGroup()
@@ -29,9 +31,11 @@ export function InventoryCreatePage() {
   const [brandOptions, setBrandOptions] = useState<string[]>([])
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [colorOptions, setColorOptions] = useState<string[]>([])
+  const [factoryOptions, setFactoryOptions] = useState<string[]>([])
 
   const isFrames = group?.slug === 'frames'
   const isLenses = group?.slug === 'lenses'
+  const isAccessories = group?.slug === 'accessories'
 
   useEffect(() => {
     if (!isFrames) return
@@ -39,6 +43,11 @@ export function InventoryCreatePage() {
     frameService.listModels().then(setModelOptions)
     frameService.listColors().then(setColorOptions)
   }, [isFrames])
+
+  useEffect(() => {
+    if (!isLenses) return
+    lensService.listFactories().then(setFactoryOptions)
+  }, [isLenses])
 
   if (!group) {
     return <Navigate to="/dashboard/inventory" replace />
@@ -75,17 +84,54 @@ export function InventoryCreatePage() {
       return
     }
 
+    if (isAccessories) {
+      setSaving(true)
+      try {
+        await accessoryService.create({
+          name: nameRef.current!.value.trim(),
+          qty: Number(qtyRef.current!.value || 0),
+          price: Number(priceRef.current!.value || 0),
+        })
+        formRef.current?.reset()
+        showToast(`Item added to ${label}`)
+        navigate(`/dashboard/inventory/${slug}/list`)
+      } catch (err) {
+        const message = isAxiosError(err) ? err.response?.data?.message : null
+        setError(message ?? 'Unable to save this accessory. Please try again.')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
+    if (isLenses) {
+      setSaving(true)
+      try {
+        await lensService.create({
+          name: nameRef.current!.value.trim(),
+          type: lensTypeRef.current!.value,
+          coating: lensCoatingRef.current!.value,
+          factory: lensFactoryRef.current!.value.trim(),
+          price: Number(priceRef.current!.value || 0),
+        })
+        formRef.current?.reset()
+        showToast(`Item added to ${label}`)
+        navigate(`/dashboard/inventory/${slug}/list`)
+      } catch (err) {
+        const message = isAxiosError(err) ? err.response?.data?.message : null
+        setError(message ?? 'Unable to save this lens. Please try again.')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
     addInventoryItem({
       name: nameRef.current!.value.trim(),
       category: categoryRef.current ? categoryRef.current.value : categories[0],
       qty: Number(qtyRef.current!.value || 0),
       price: Number(priceRef.current!.value || 0),
       threshold: Number(thresholdRef.current!.value || 5),
-      ...(isLenses && {
-        lensType: lensTypeRef.current!.value,
-        lensCoating: lensCoatingRef.current!.value,
-        lensFactory: lensFactoryRef.current!.value.trim(),
-      }),
     })
     formRef.current?.reset()
     if (thresholdRef.current) thresholdRef.current.value = '5'
@@ -106,7 +152,7 @@ export function InventoryCreatePage() {
               <input required ref={nameRef} placeholder={`e.g. ${label} item`} />
             </div>
           )}
-          {categories.length > 1 && (
+          {categories.length > 1 && !isAccessories && (
             <div className="field">
               <label>Category</label>
               <select ref={categoryRef} defaultValue={categories[0]}>
@@ -175,19 +221,26 @@ export function InventoryCreatePage() {
               </div>
               <div className="field">
                 <label>Factory Name</label>
-                <input ref={lensFactoryRef} placeholder="e.g. Essilor" />
+                <input ref={lensFactoryRef} list="factory-options" placeholder="e.g. Essilor" autoComplete="off" />
+                <datalist id="factory-options">
+                  {factoryOptions.map((f) => (
+                    <option key={f} value={f} />
+                  ))}
+                </datalist>
               </div>
             </>
           )}
-          <div className="field">
-            <label>Quantity *</label>
-            <input required type="number" min={0} ref={qtyRef} placeholder="0" />
-          </div>
+          {!isLenses && (
+            <div className="field">
+              <label>Quantity *</label>
+              <input required type="number" min={0} ref={qtyRef} placeholder="0" />
+            </div>
+          )}
           <div className="field">
             <label>Unit Price (Rs.) *</label>
             <input required type="number" min={0} ref={priceRef} placeholder="0" />
           </div>
-          {!isFrames && (
+          {!isFrames && !isAccessories && !isLenses && (
             <div className="field">
               <label>Low Stock Alert Below</label>
               <input type="number" min={0} ref={thresholdRef} defaultValue={5} />

@@ -6,6 +6,7 @@ import { EmptyState } from '../components/EmptyState'
 import { fmt } from '../utils'
 import { useInventoryGroup } from '../hooks/useInventoryGroup'
 import { frameService, type Frame } from '../services/frameService'
+import { lensService, type Lens } from '../services/lensService'
 
 export function InventoryListPage() {
   const group = useInventoryGroup()
@@ -13,18 +14,31 @@ export function InventoryListPage() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<'All' | 'low'>('All')
   const isFrames = group?.slug === 'frames'
+  const isLenses = group?.slug === 'lenses'
 
   const [frames, setFrames] = useState<Frame[]>([])
-  const [loading, setLoading] = useState(isFrames)
+  const [framesLoading, setFramesLoading] = useState(isFrames)
 
   useEffect(() => {
     if (!isFrames) return
-    setLoading(true)
+    setFramesLoading(true)
     frameService
       .list()
       .then(setFrames)
-      .finally(() => setLoading(false))
+      .finally(() => setFramesLoading(false))
   }, [isFrames])
+
+  const [lenses, setLenses] = useState<Lens[]>([])
+  const [lensesLoading, setLensesLoading] = useState(isLenses)
+
+  useEffect(() => {
+    if (!isLenses) return
+    setLensesLoading(true)
+    lensService
+      .list()
+      .then(setLenses)
+      .finally(() => setLensesLoading(false))
+  }, [isLenses])
 
   if (!group) {
     return <Navigate to="/dashboard/inventory" replace />
@@ -34,6 +48,12 @@ export function InventoryListPage() {
     await frameService.remove(id)
     setFrames((prev) => prev.filter((f) => f.id !== id))
     showToast('Frame removed')
+  }
+
+  async function handleDeleteLens(id: number) {
+    await lensService.remove(id)
+    setLenses((prev) => prev.filter((l) => l.id !== id))
+    showToast('Lens removed')
   }
 
   if (isFrames) {
@@ -71,7 +91,7 @@ export function InventoryListPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {framesLoading ? (
                 <tr>
                   <td colSpan={6}>
                     <EmptyState title="Loading..." sub="Fetching frame stock." />
@@ -112,10 +132,71 @@ export function InventoryListPage() {
     )
   }
 
+  if (isLenses) {
+    return (
+      <div className="panel">
+        <div className="panel-head">
+          <div className="panel-title">
+            {group.label} Stock <span className="n">({lenses.length})</span>
+          </div>
+          <div className="filter-row" style={{ margin: 0, gap: 8 }}>
+            <button type="button" className="btn btn-copper" onClick={() => navigate(`/dashboard/inventory/${group.slug}/create`)}>
+              <Plus />
+              New {group.label} Item
+            </button>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Details</th>
+                <th>Price</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lensesLoading ? (
+                <tr>
+                  <td colSpan={4}>
+                    <EmptyState title="Loading..." sub="Fetching lens stock." />
+                  </td>
+                </tr>
+              ) : lenses.length ? (
+                lenses.map((l) => (
+                  <tr key={l.id}>
+                    <td>{l.name}</td>
+                    <td>
+                      <span className="text-muted-foreground text-xs">
+                        {[l.type, l.coating, l.factory].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </td>
+                    <td>{fmt(db.settings.currency, l.price)}</td>
+                    <td>
+                      <button type="button" className="icon-btn" title="Delete" onClick={() => handleDeleteLens(l.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4}>
+                    <EmptyState title="No items found" sub="Add inventory items to see them here." />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   const categories = group.categories as readonly string[]
   const items = db.inventory.filter((i) => categories.includes(i.category))
   const list = filter === 'low' ? items.filter((i) => i.qty <= i.threshold) : items
-  const isLenses = group.slug === 'lenses'
 
   return (
     <div className="panel">
@@ -141,7 +222,7 @@ export function InventoryListPage() {
           <thead>
             <tr>
               <th>Item</th>
-              {isLenses ? <th>Details</th> : <th>Category</th>}
+              <th>Category</th>
               <th>Qty</th>
               <th>Unit Price</th>
               <th>Value</th>
@@ -152,17 +233,9 @@ export function InventoryListPage() {
               list.map((i) => (
                 <tr key={i.id}>
                   <td>{i.name}</td>
-                  {isLenses ? (
-                    <td>
-                      <span className="text-muted-foreground text-xs">
-                        {[i.lensType, i.lensCoating, i.lensFactory].filter(Boolean).join(' · ') || '—'}
-                      </span>
-                    </td>
-                  ) : (
-                    <td>
-                      <span className="cat-pill">{i.category}</span>
-                    </td>
-                  )}
+                  <td>
+                    <span className="cat-pill">{i.category}</span>
+                  </td>
                   <td>
                     <span className={`qty-pill ${i.qty <= i.threshold ? 'qty-low' : 'qty-ok'}`}>{i.qty}</span>
                   </td>

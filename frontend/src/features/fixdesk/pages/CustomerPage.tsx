@@ -1,8 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { Check, Clock, RotateCcw, Calendar } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { fmt } from '../utils'
+import { frameService, type Frame } from '../services/frameService'
+import { lensService, type Lens } from '../services/lensService'
+import { customerService } from '../services/customerService'
+import { visionTestService } from '../services/visionTestService'
+import { orderService, type SourceType, type LensSide as OrderLensSide } from '../services/orderService'
 
 
 const refractionOptions = (() => {
@@ -172,6 +178,18 @@ export function CustomerPage() {
   const [discount, setDiscount] = useState(0)
   const [payment, setPayment] = useState(0)
 
+  const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Live inventory pulled from the backend (Frames & Lenses services)
+  const [frameStocks, setFrameStocks] = useState<Frame[]>([])
+  const [lensList, setLensList] = useState<Lens[]>([])
+
+  useEffect(() => {
+    frameService.list().then(setFrameStocks).catch(() => {})
+    lensService.list().then(setLensList).catch(() => {})
+  }, [])
+
   // --- Dynamic Calculations ---
 
 
@@ -258,9 +276,9 @@ export function CustomerPage() {
     setShowSearchDropdown(false)
   }
 
-  // Get Frames & Lenses from inventory DB
-  const frameItems = db.inventory.filter((item) => item.category === 'Frames')
-  const lensItems = db.inventory.filter((item) => item.category === 'Lenses')
+  // Frames & Lenses come from the backend (frameService / lensService)
+  const frameItems = frameStocks
+  const lensItems = lensList
 
   // Selected frame details
   let selectedFrameBrand = ''
@@ -272,11 +290,9 @@ export function CustomerPage() {
     const item = frameItems.find((f) => f.id === Number(frameInventoryId))
     if (item) {
       selectedFramePrice = item.price
-      // Try to parse brand/code/color from item name (Format: "Brand Code Color")
-      const parts = item.name.split(' ')
-      selectedFrameBrand = parts[0] || item.name
-      selectedFrameCode = parts[1] || ''
-      selectedFrameColor = parts.slice(2).join(' ') || ''
+      selectedFrameBrand = item.brand
+      selectedFrameCode = item.modelNumber
+      selectedFrameColor = item.color || ''
     }
   } else {
     selectedFrameBrand = manualFrameBrand
@@ -295,10 +311,9 @@ export function CustomerPage() {
     const item = lensItems.find((l) => l.id === Number(lensInventoryId))
     if (item) {
       selectedLensPricePerUnit = item.price
-      const parts = item.name.split(' ')
-      selectedLensFactory = parts[0] || item.name
-      selectedLensType = parts[1] || ''
-      selectedLensCoating = parts.slice(2).join(' ') || ''
+      selectedLensFactory = item.factory || ''
+      selectedLensType = item.type || ''
+      selectedLensCoating = item.coating || ''
     }
   } else {
     selectedLensFactory = manualLensFactory
@@ -355,7 +370,7 @@ export function CustomerPage() {
           setManualFrameColor(job.frameColor || '')
           setManualFramePrice(job.framePrice || 0)
         } else {
-          const found = frameItems.find(f => f.name.includes(job.frameBrand || '') && f.name.includes(job.frameCode || ''))
+          const found = frameItems.find(f => f.brand === job.frameBrand && f.modelNumber === job.frameCode)
           if (found) {
             setFrameInventoryId(String(found.id))
           } else {
@@ -375,7 +390,7 @@ export function CustomerPage() {
           setManualLensCoating(job.lensCoating || '')
           setManualLensPrice(job.lensPrice || 0)
         } else {
-          const found = lensItems.find(l => l.name.includes(job.lensFactory || '') && l.name.includes(job.lensTypeName || ''))
+          const found = lensItems.find(l => l.factory === job.lensFactory && l.type === job.lensTypeName)
           if (found) {
             setLensInventoryId(String(found.id))
           } else {
@@ -446,7 +461,7 @@ export function CustomerPage() {
     }
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
 
     if (!name.trim() || !phone.trim()) {
@@ -454,8 +469,61 @@ export function CustomerPage() {
       return
     }
 
-    if (isEditing) {
-      updatePrescription(editingJob.id, {
+    setSubmitError(null)
+    setSaving(true)
+    try {
+      // 1. Register / update the patient record in the backend
+      const customer = await customerService.upsert({
+        name: name.trim(),
+        phone: phone.trim(),
+        nic: nic.trim(),
+        address: address.trim(),
+        dob: dob || undefined,
+        note: customerNote.trim(),
+      })
+
+      // 2. Store this visit's eye test (both sides vision, PD/height, refraction remark, medical remarks)
+      let visionTestId: number | undefined
+      if (hasVisionDetails) {
+        const visionTest = await visionTestService.create({
+          customerId: customer.id,
+          hasVisionDetails,
+          rSph, rCyl, rAxis, rAdd, rVa,
+          lSph, lCyl, lAxis, lAdd, lVa,
+          pd, height,
+        })
+        visionTestId = visionTest.id
+      }
+
+      // 3. Create/Update the invoice, linked to the frame (frames GET) and lens (lenses GET) endpoints
+      const orderPayload = {
+        customerId: customer.id,
+        visionTestId,
+        frameSourceType: frameType as SourceType,
+        frameStockId: frameType === 'inventory' && frameInventoryId ? Number(frameInventoryId) : undefined,
+        frameBrand: selectedFrameBrand,
+        frameCode: selectedFrameCode,
+        frameColor: selectedFrameColor,
+        framePrice: selectedFramePrice,
+        lensSourceType: lensType as SourceType,
+        lensId: lensType === 'inventory' && lensInventoryId ? Number(lensInventoryId) : undefined,
+        lensSide: lensSide as OrderLensSide,
+        lensFactory: selectedLensFactory,
+        lensTypeName: selectedLensType,
+        lensCoating: selectedLensCoating,
+        lensPrice: selectedLensPricePerUnit,
+        prescriptionNote: prescriptionNote.trim(),
+        discount,
+        payment,
+        dueDate,
+      }
+
+      const backendOrderId = isEditing && editingItem?.backendOrderId
+        ? (await orderService.update(editingItem.backendOrderId, orderPayload)).id
+        : (await orderService.create(orderPayload)).id
+
+      // 4. Mirror into the local job list so Search/Accounts pages keep working
+      const localInput = {
         name: name.trim(),
         phone: phone.trim(),
         nic: nic.trim(),
@@ -490,51 +558,29 @@ export function CustomerPage() {
         payment,
         balance,
         dueDate,
-      })
-      setEditingJob(null)
-      showToast('Order updated successfully!')
-      navigate('/dashboard/search')
-    } else {
-      addPrescription({
-        name: name.trim(),
-        phone: phone.trim(),
-        nic: nic.trim(),
-        address: address.trim(),
-        note: customerNote.trim(),
-        dob,
-        age: Number(age || 0),
 
-        hasVisionDetails,
-        rightEye: { sph: rSph, cyl: rCyl, axis: rAxis, add: rAdd, va: rVa },
-        leftEye: { sph: lSph, cyl: lCyl, axis: lAxis, add: lAdd, va: lVa },
-        pd,
-        height,
+        backendOrderId,
+        backendCustomerId: customer.id,
+      }
 
-        frameType,
-        frameBrand: selectedFrameBrand,
-        frameCode: selectedFrameCode,
-        frameColor: selectedFrameColor,
-        framePrice: selectedFramePrice,
+      if (isEditing) {
+        updatePrescription(editingJob.id, localInput)
+        setEditingJob(null)
+        showToast('Order updated successfully!')
+        navigate('/dashboard/search')
+      } else {
+        addPrescription(localInput)
+        showToast('Order saved successfully!')
+      }
 
-        lensType,
-        lensSide,
-        lensFactory: selectedLensFactory,
-        lensTypeName: selectedLensType,
-        lensCoating: selectedLensCoating,
-        lensPrice: selectedLensPricePerUnit,
-
-        prescriptionNote: prescriptionNote.trim(),
-
-        total,
-        discount,
-        payment,
-        balance,
-        dueDate,
-      })
-      showToast('Order saved successfully!')
+      handleReset()
+    } catch (err) {
+      const message = isAxiosError(err) ? err.response?.data?.message : null
+      setSubmitError(Array.isArray(message) ? message.join(', ') : message ?? 'Unable to save this order. Please try again.')
+      showToast('Failed to save order to the server')
+    } finally {
+      setSaving(false)
     }
-
-    handleReset()
   }
 
 
@@ -795,7 +841,7 @@ export function CustomerPage() {
                       label="Select Frame from Stock"
                       value={frameInventoryId}
                       options={frameItems.map((f) => ({
-                        label: `${f.name} - (${fmt(db.settings.currency, f.price)})`,
+                        label: `${f.brand} ${f.modelNumber}${f.color ? ' ' + f.color : ''} - (${fmt(db.settings.currency, f.price)})`,
                         value: String(f.id)
                       }))}
                       onChange={setFrameInventoryId}
@@ -966,11 +1012,15 @@ export function CustomerPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn btn-dark-green flex-[1.5] justify-center py-3.5" style={{ minHeight: '44px', borderRadius: '12px' }}>
+            <button type="submit" disabled={saving} className="btn btn-dark-green flex-[1.5] justify-center py-3.5" style={{ minHeight: '44px', borderRadius: '12px' }}>
               <Check size={16} />
-              {isEditing ? 'Update Order' : 'Save Order'}
+              {saving ? 'Saving...' : isEditing ? 'Update Order' : 'Save Order'}
             </button>
           </div>
+
+          {submitError && (
+            <p className="text-sm text-[var(--danger)]" style={{ marginTop: -8 }}>{submitError}</p>
+          )}
         </div>
       </form>
 
