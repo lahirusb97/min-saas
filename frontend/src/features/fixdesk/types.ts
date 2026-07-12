@@ -114,12 +114,20 @@ export interface ShopSettings {
   hours: string
 }
 
+export interface Expense {
+  id: number
+  description: string
+  amount: number
+  createdAt: number
+}
+
 export interface FixDeskDB {
   customers: Customer[]
   repairJobs: RepairJob[]
   accJobs: AccJob[]
   inventory: InventoryItem[]
   prescriptions: Prescription[]
+  expenses?: Expense[]
   settings: ShopSettings
   counters: { repair: number; acc: number; prescription: number }
 }

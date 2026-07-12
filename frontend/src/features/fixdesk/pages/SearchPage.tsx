@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Eye, Printer, Trash2, Search, ChevronDown, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, Printer, Trash2, Search, ChevronDown, Check, Coins } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 
 export function SearchPage() {
-  const { db, updateJobStatus, deleteJob, showToast } = useFixDesk()
+  const { db, updateJobStatus, deleteJob, recordRepayment, setEditingJob, showToast } = useFixDesk()
+  const navigate = useNavigate()
+
+  const handleEditClick = (item: any) => {
+    const editType = item.type === 'Access.' ? 'Accessories' : (item.type === 'Order' ? 'Order' : 'Repair')
+    setEditingJob({ type: editType, id: item.realId })
+    showToast(`Loading ${item.type} details to edit...`)
+    navigate(item.type === 'Order' ? '/dashboard/customer' : (item.type === 'Repair' ? '/dashboard/repair' : '/dashboard/accessories'))
+  }
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'All' | 'Prescr.' | 'Repair' | 'Access.'>('All')
+  const [typeFilter, setTypeFilter] = useState<'All' | 'Order' | 'Repair' | 'Access.'>('All')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Delivered' | 'Cancelled'>('All')
   const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'REMAINING' | 'ZERO'>('ALL')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -28,7 +37,7 @@ export function SearchPage() {
   const prescriptionsUnified = (db.prescriptions || []).map(p => ({
     id: `pres-${p.id}`,
     realId: p.id,
-    type: 'Prescr.',
+    type: 'Order',
     status: p.status || 'Delivered',
     name: p.name,
     contact: p.phone,
@@ -137,7 +146,7 @@ export function SearchPage() {
   }
 
   const getTypeBadgeClass = (type: string) => {
-    if (type === 'Prescr.') return 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/20'
+    if (type === 'Order') return 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/20'
     if (type === 'Repair') return 'text-[var(--teal)] bg-[var(--teal-dim)]/20 border-[var(--teal)]/20'
     return 'text-[#9c7cf4] bg-[#9c7cf4]/10 border-[#9c7cf4]/20'
   }
@@ -161,6 +170,30 @@ export function SearchPage() {
       deleteJob(type as any, realId)
       showToast(`Deleted ${type} order ${invoiceNo}`)
     }
+  }
+
+  const handleRepayment = (item: any) => {
+    if (item.balance <= 0) {
+      showToast("This order is already fully paid!")
+      return
+    }
+
+    const amountStr = prompt(`Enter repayment amount for ${item.name} (${item.invoiceNo}):\nRemaining Balance: Rs. ${item.balance}`)
+    if (amountStr === null) return // cancelled
+    
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid positive amount!")
+      return
+    }
+
+    if (amount > item.balance) {
+      alert(`Repayment amount cannot exceed the remaining balance of Rs. ${item.balance}!`)
+      return
+    }
+
+    recordRepayment(item.type as any, item.realId, amount)
+    showToast(`Recorded repayment of Rs. ${amount} for ${item.invoiceNo}`)
   }
 
   return (
@@ -205,11 +238,11 @@ export function SearchPage() {
               <input 
                 type="radio" 
                 name="typeFilter" 
-                checked={typeFilter === 'Prescr.'} 
-                onChange={() => setTypeFilter('Prescr.')} 
+                checked={typeFilter === 'Order'} 
+                onChange={() => setTypeFilter('Order')} 
                 className="accent-[var(--copper)] cursor-pointer"
               />
-              Prescriptions
+              Orders
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer hover:text-[var(--copper)] transition-colors">
               <input 
@@ -253,8 +286,8 @@ export function SearchPage() {
         />
       </div>
 
-      {/* Responsive Table Container */}
-      <div className="overflow-x-auto w-full">
+      {/* Responsive Table Container (Desktop view) */}
+      <div className="search-desktop-table overflow-x-auto w-full">
         <table className="w-full border-collapse text-left text-[12.5px]">
           <thead>
             <tr className="border-b border-[var(--border)] text-[var(--text-muted)] font-bold text-[11px] uppercase tracking-wider">
@@ -343,22 +376,21 @@ export function SearchPage() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {item.balance > 0 && (
+                          <button
+                            type="button"
+                            className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--success)] transition-colors"
+                            title="Record Repayment"
+                            onClick={() => handleRepayment(item)}
+                          >
+                            <Coins size={13.5} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[#3b82f6] transition-colors"
-                          title="View Details"
-                          onClick={() => {
-                            showToast(`Opening detail summary for ${item.invoiceNo}...`)
-                            alert(
-                              `Order details for ${item.invoiceNo}:\n` +
-                              `Type: ${item.type}\n` +
-                              `Customer: ${item.name}\n` +
-                              `Contact: ${item.contact}\n` +
-                              `Total Amount: ${item.total}\n` +
-                              `Balance Due: ${item.balance}\n` +
-                              `Status: ${item.status}`
-                            )
-                          }}
+                          title="Edit Details"
+                          onClick={() => handleEditClick(item)}
                         >
                           <Eye size={13.5} />
                         </button>
@@ -395,6 +427,142 @@ export function SearchPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards Container (Mobile view) */}
+      <div className="search-mobile-cards">
+        {filteredItems.length ? (
+          filteredItems.map((item) => {
+            const initials = item.name.trim().charAt(0).toUpperCase()
+            const avatarColor = getAvatarColors(item.name)
+            const isChecked = selectedIds.includes(item.id)
+
+            return (
+              <div key={item.id} className="search-card">
+                {/* Header: Checkbox, Type and Status dropdown */}
+                <div className="search-card-header">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => handleSelectRow(item.id, e.target.checked)}
+                      className="cursor-pointer accent-[var(--copper)]"
+                    />
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getTypeBadgeClass(item.type)}`}>
+                      {item.type}
+                    </span>
+                  </div>
+                  <select
+                    value={item.status}
+                    onChange={(e) => updateJobStatus(item.type as any, item.realId, e.target.value as any)}
+                    className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer outline-none transition-all ${getStatusClass(item.status)}`}
+                    style={{ appearance: 'none', WebkitAppearance: 'none', textAlign: 'center' }}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                {/* Body: profile name, contact, order details */}
+                <div className="search-card-body">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11.5px] font-display flex-shrink-0"
+                      style={{ backgroundColor: avatarColor.bg, color: avatarColor.text }}
+                    >
+                      {initials}
+                    </div>
+                    <span className="font-semibold text-[13.5px]">{item.name}</span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Contact:</span>
+                    <span className="font-mono text-[var(--text)] text-[12px]">{item.contact}</span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Invoice No:</span>
+                    <span className="font-bold text-[var(--text)] font-mono text-[12px]">{item.invoiceNo}</span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Invoice Date:</span>
+                    <span className="text-[12px]">{formatDate(item.date)}</span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Delivery Date:</span>
+                    <span className="text-[12px]">{formatDueDate(item.dueDate)}</span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Invoice Total:</span>
+                    <span className={`font-semibold text-[12px] ${item.balance > 0 ? 'text-[var(--text)]' : 'text-[var(--success)]'}`}>
+                      {item.total}
+                    </span>
+                  </div>
+
+                  <div className="search-card-row">
+                    <span className="text-[var(--text-muted)] text-[12px]">Balance Due:</span>
+                    <span className={`px-2 py-0.5 rounded-md font-bold text-[11px] border ${
+                      item.balance > 0
+                        ? 'text-[var(--danger)] bg-[var(--danger-dim)]/10 border-[var(--danger)]/30'
+                        : 'text-[var(--success)] bg-[var(--success-dim)]/10 border-[var(--success)]/30'
+                    }`}>
+                      {item.balance}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="search-card-footer">
+                  {item.balance > 0 && (
+                    <button
+                      type="button"
+                      className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--success)] transition-colors"
+                      title="Record Repayment"
+                      onClick={() => handleRepayment(item)}
+                    >
+                      <Coins size={13.5} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[#3b82f6] transition-colors"
+                    title="Edit Details"
+                    onClick={() => handleEditClick(item)}
+                  >
+                    <Eye size={13.5} />
+                  </button>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--copper)] transition-colors"
+                    title="Print Invoice"
+                    onClick={() => {
+                      showToast(`Printing invoice ${item.invoiceNo}...`)
+                      window.print()
+                    }}
+                  >
+                    <Printer size={13.5} />
+                  </button>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--danger)] transition-colors"
+                    title="Delete Order"
+                    onClick={() => handleDeleteItem(item.type, item.realId, item.invoiceNo)}
+                  >
+                    <Trash2 size={13.5} />
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <div className="py-8 text-center text-[var(--text-faint)] bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+            No orders or invoices match your search query.
+          </div>
+        )}
       </div>
     </div>
   )

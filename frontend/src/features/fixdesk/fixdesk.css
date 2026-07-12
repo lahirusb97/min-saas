@@ -958,7 +958,7 @@
 }
 
 /* ===== SEARCH FILTERS RESPONSIVE STYLES ===== */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .fixdesk .search-filters-row {
     flex-direction: column !important;
     align-items: stretch !important;
@@ -978,5 +978,103 @@
     flex-wrap: wrap !important;
     gap: 8px !important;
   }
+}
+
+/* ===== SEARCH RESULTS TABLE RESPONSIVE STYLES ===== */
+.fixdesk .search-desktop-table {
+  display: block;
+}
+.fixdesk .search-mobile-cards {
+  display: none;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.fixdesk .search-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.fixdesk .search-card:hover {
+  border-color: var(--copper-dim);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.fixdesk .search-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 10px;
+}
+
+.fixdesk .search-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fixdesk .search-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.fixdesk .search-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-t: 1px dashed var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1024px) {
+  .fixdesk .search-desktop-table {
+    display: none !important;
+  }
+  .fixdesk .search-mobile-cards {
+    display: grid !important;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1024px) {
+  .fixdesk .search-mobile-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ===== MODAL ANIMATION STYLES ===== */
+@keyframes modalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-zoom-in {
+  animation: modalZoomIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fade-in {
+  animation: modalFadeIn 0.18s ease-out forwards;
 }
 

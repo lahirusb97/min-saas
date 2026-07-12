@@ -27,6 +27,7 @@ export function seedDB(): FixDeskDB {
       { id: 7, name: 'Tempered Glass (Universal)', category: 'Tempered Glass', qty: 2, price: 350, threshold: 10 },
     ],
     prescriptions: [],
+    expenses: [],
     settings: {
       name: 'FixDesk Vision Care',
       phone: '077 123 4567',

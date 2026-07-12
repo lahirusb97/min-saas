@@ -17,4 +17,5 @@ export const PAGE_TITLES: Record<string, [string, string]> = {
   inventory: ['Inventory', 'STOCK MANAGEMENT'],
   settings: ['Shop Settings', 'SHOP PROFILE'],
   search: ['Search Orders', 'FIND INVOICES, REPAIRS & ACCESSORIES'],
+  accounts: ['Accounts & Income', 'FINANCIAL OVERVIEW'],
 }

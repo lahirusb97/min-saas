@@ -13,7 +13,7 @@ export function DashboardHome() {
 
   return (
     <section>
-      <div className="menu-intro">
+      <div className="menu-intro mb-4">
         <div className="menu-title">What do you want to do?</div>
         <div className="menu-sub">Pick an option below to get started.</div>
       </div>
