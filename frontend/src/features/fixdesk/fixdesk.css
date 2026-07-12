@@ -576,8 +576,24 @@
   font-weight: 600;
 }
 
+/* Keyboard/hover cursor position, distinct from the actually selected value */
+.fixdesk .custom-select-option.highlighted {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.fixdesk .custom-select-option.highlighted.selected {
+  background: var(--teal-dim);
+  color: var(--teal);
+}
+
 /* Left eye copper styling for selected states */
 .fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .custom-select-option.selected {
+  background: var(--copper-dim);
+  color: var(--copper);
+}
+
+.fixdesk .bg-\[var\(--surface\)\]:has(.text-\[var\(--copper\)\]) .custom-select-option.highlighted.selected {
   background: var(--copper-dim);
   color: var(--copper);
 }

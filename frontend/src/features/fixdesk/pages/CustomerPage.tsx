@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { Check, Clock, RotateCcw, Calendar } from 'lucide-react'
@@ -43,6 +43,8 @@ interface CustomSelectProps {
 function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
+  const optionRefs = useRef<Array<HTMLDivElement | null>>([])
 
   const normalizedOptions: CustomSelectOption[] = options.map((opt) => {
     if (typeof opt === 'string') {
@@ -57,10 +59,66 @@ function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
 
   const selectedOption = normalizedOptions.find((opt) => opt.value === value)
 
+  // On open (or when the search narrows the list), land on the current value, falling back
+  // to the "0.00" midpoint so long refraction lists (-24.00..+24.00) don't open scrolled to an end.
+  useEffect(() => {
+    if (!isOpen) return
+    const currentIndex = filteredOptions.findIndex((opt) => opt.value === value)
+    const zeroIndex = filteredOptions.findIndex((opt) => opt.value === '0.00')
+    const initialIndex = currentIndex >= 0 ? currentIndex : zeroIndex >= 0 ? zeroIndex : 0
+    setHighlightedIndex(initialIndex)
+    requestAnimationFrame(() => {
+      optionRefs.current[initialIndex]?.scrollIntoView({ block: 'center' })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, searchQuery])
+
+  function selectHighlighted(index: number) {
+    const opt = filteredOptions[index]
+    if (!opt) return
+    onChange(opt.value)
+    setIsOpen(false)
+    setSearchQuery('')
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!isOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setIsOpen(true)
+      }
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex((i) => {
+        const next = Math.min(i + 1, filteredOptions.length - 1)
+        optionRefs.current[next]?.scrollIntoView({ block: 'nearest' })
+        return next
+      })
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((i) => {
+        const next = Math.max(i - 1, 0)
+        optionRefs.current[next]?.scrollIntoView({ block: 'nearest' })
+        return next
+      })
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      selectHighlighted(highlightedIndex)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setIsOpen(false)
+      setSearchQuery('')
+    }
+  }
+
   return (
     <div className={`field ${label ? 'floating' : ''} relative ${value && label ? 'has-value' : ''}`}>
-      <div 
+      <div
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
         className="custom-select-trigger"
       >
         {selectedOption ? selectedOption.label : ' '}
@@ -69,7 +127,7 @@ function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
 
       {isOpen && (
         <>
-          <div 
+          <div
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}
             onClick={() => {
               setIsOpen(false)
@@ -84,21 +142,20 @@ function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
                   placeholder="Type to search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="custom-select-search"
                   autoFocus
                 />
               </div>
             )}
             <div className="custom-select-options-list">
-              {filteredOptions.map((opt) => (
+              {filteredOptions.map((opt, idx) => (
                 <div
                   key={opt.value}
-                  onClick={() => {
-                    onChange(opt.value)
-                    setIsOpen(false)
-                    setSearchQuery('')
-                  }}
-                  className={`custom-select-option ${value === opt.value ? 'selected' : ''}`}
+                  ref={(el) => { optionRefs.current[idx] = el }}
+                  onMouseEnter={() => setHighlightedIndex(idx)}
+                  onClick={() => selectHighlighted(idx)}
+                  className={`custom-select-option ${value === opt.value ? 'selected' : ''} ${idx === highlightedIndex ? 'highlighted' : ''}`}
                 >
                   {opt.label}
                 </div>
@@ -796,8 +853,8 @@ export function CustomerPage() {
         <div className="panel flex flex-col gap-6">
           
           {/* Tabbed Selection Panel */}
-          <div className="border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] overflow-hidden">
-            <div className="flex border-b border-[var(--border)] bg-[var(--surface-2)]">
+          <div className="border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)]">
+            <div className="flex border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-[var(--radius)] overflow-hidden">
               <button
                 type="button"
                 className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-all text-center ${
