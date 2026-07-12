@@ -17,6 +17,7 @@ const STAMP_CLASS: Record<JobStatus, string> = {
   'In Progress': 'stamp-progress',
   Completed: 'stamp-completed',
   Delivered: 'stamp-delivered',
+  Cancelled: 'stamp-cancelled',
 }
 
 export function stampClass(status: JobStatus) {

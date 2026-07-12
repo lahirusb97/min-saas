@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Check, Clock, RotateCcw, Calendar } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { fmt } from '../utils'
@@ -110,7 +111,8 @@ function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
 }
 
 export function CustomerPage() {
-  const { db, addPrescription, showToast } = useFixDesk()
+  const { db, addPrescription, editingJob, setEditingJob, updatePrescription, showToast } = useFixDesk()
+  const navigate = useNavigate()
 
   // --- Form State ---
   const [name, setName] = useState('')
@@ -313,8 +315,89 @@ export function CustomerPage() {
   const total = totalFramePrice + totalLensPrice
   const balance = Math.max(0, total - discount - payment)
 
-  // Next Serial Number
+  // Next Serial Number / Editing Indicator
+  const isEditing = editingJob && editingJob.type === 'Order'
   const nextSerialStr = String((db.counters.prescription || 6) + 1).padStart(4, '0')
+  const editingItem = isEditing ? db.prescriptions?.find(p => p.id === editingJob.id) : null
+
+  const [prevEditingJob, setPrevEditingJob] = useState<{ type: string, id: number } | null>(null)
+
+  // Load editing item if exists
+  useEffect(() => {
+    if (editingJob && editingJob.type === 'Order') {
+      const job = db.prescriptions?.find(p => p.id === editingJob.id)
+      if (job) {
+        setName(job.name)
+        setPhone(job.phone)
+        setNic(job.nic || '')
+        setAddress(job.address || '')
+        setCustomerNote(job.note || '')
+        setDob(job.dob || '')
+        setAge(job.age || '')
+        setHasVisionDetails(job.hasVisionDetails)
+        setRSph(job.rightEye?.sph || '0.00')
+        setRCyl(job.rightEye?.cyl || '0.00')
+        setRAxis(job.rightEye?.axis || '')
+        setRAdd(job.rightEye?.add || '0.00')
+        setRVa(job.rightEye?.va || '')
+        setLSph(job.leftEye?.sph || '0.00')
+        setLCyl(job.leftEye?.cyl || '0.00')
+        setLAxis(job.leftEye?.axis || '')
+        setLAdd(job.leftEye?.add || '0.00')
+        setLVa(job.leftEye?.va || '')
+        setPd(job.pd || '')
+        setHeight(job.height || '')
+        
+        setFrameType(job.frameType)
+        if (job.frameType === 'manual') {
+          setManualFrameBrand(job.frameBrand || '')
+          setManualFrameCode(job.frameCode || '')
+          setManualFrameColor(job.frameColor || '')
+          setManualFramePrice(job.framePrice || 0)
+        } else {
+          const found = frameItems.find(f => f.name.includes(job.frameBrand || '') && f.name.includes(job.frameCode || ''))
+          if (found) {
+            setFrameInventoryId(String(found.id))
+          } else {
+            setManualFrameBrand(job.frameBrand || '')
+            setManualFrameCode(job.frameCode || '')
+            setManualFrameColor(job.frameColor || '')
+            setManualFramePrice(job.framePrice || 0)
+            setFrameType('manual')
+          }
+        }
+
+        setLensType(job.lensType)
+        setLensSide(job.lensSide || 'Both')
+        if (job.lensType === 'manual') {
+          setManualLensFactory(job.lensFactory || '')
+          setManualLensTypeName(job.lensTypeName || '')
+          setManualLensCoating(job.lensCoating || '')
+          setManualLensPrice(job.lensPrice || 0)
+        } else {
+          const found = lensItems.find(l => l.name.includes(job.lensFactory || '') && l.name.includes(job.lensTypeName || ''))
+          if (found) {
+            setLensInventoryId(String(found.id))
+          } else {
+            setManualLensFactory(job.lensFactory || '')
+            setManualLensTypeName(job.lensTypeName || '')
+            setManualLensCoating(job.lensCoating || '')
+            setManualLensPrice(job.lensPrice || 0)
+            setLensType('manual')
+          }
+        }
+
+        setPrescriptionNote(job.prescriptionNote || '')
+        setDiscount(job.discount || 0)
+        setPayment(job.payment || 0)
+        setDueDate(job.dueDate || '')
+        setPrevEditingJob(editingJob)
+      }
+    } else if (!editingJob && prevEditingJob) {
+      handleReset()
+      setPrevEditingJob(null)
+    }
+  }, [editingJob, db.prescriptions, prevEditingJob])
 
   // --- Handlers ---
   function handleReset() {
@@ -358,6 +441,9 @@ export function CustomerPage() {
     setPayment(0)
     const today = new Date()
     setDueDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
+    if (isEditing) {
+      setEditingJob(null)
+    }
   }
 
   function handleSubmit(e: FormEvent) {
@@ -368,45 +454,87 @@ export function CustomerPage() {
       return
     }
 
-    addPrescription({
-      name: name.trim(),
-      phone: phone.trim(),
-      nic: nic.trim(),
-      address: address.trim(),
-      note: customerNote.trim(),
-      dob,
-      age: Number(age || 0),
+    if (isEditing) {
+      updatePrescription(editingJob.id, {
+        name: name.trim(),
+        phone: phone.trim(),
+        nic: nic.trim(),
+        address: address.trim(),
+        note: customerNote.trim(),
+        dob,
+        age: Number(age || 0),
 
-      hasVisionDetails,
-      rightEye: { sph: rSph, cyl: rCyl, axis: rAxis, add: rAdd, va: rVa },
-      leftEye: { sph: lSph, cyl: lCyl, axis: lAxis, add: lAdd, va: lVa },
-      pd,
-      height,
+        hasVisionDetails,
+        rightEye: { sph: rSph, cyl: rCyl, axis: rAxis, add: rAdd, va: rVa },
+        leftEye: { sph: lSph, cyl: lCyl, axis: lAxis, add: lAdd, va: lVa },
+        pd,
+        height,
 
-      frameType,
-      frameBrand: selectedFrameBrand,
-      frameCode: selectedFrameCode,
-      frameColor: selectedFrameColor,
-      framePrice: selectedFramePrice,
+        frameType,
+        frameBrand: selectedFrameBrand,
+        frameCode: selectedFrameCode,
+        frameColor: selectedFrameColor,
+        framePrice: selectedFramePrice,
 
-      lensType,
-      lensSide,
-      lensFactory: selectedLensFactory,
-      lensTypeName: selectedLensType,
-      lensCoating: selectedLensCoating,
-      lensPrice: selectedLensPricePerUnit,
+        lensType,
+        lensSide,
+        lensFactory: selectedLensFactory,
+        lensTypeName: selectedLensType,
+        lensCoating: selectedLensCoating,
+        lensPrice: selectedLensPricePerUnit,
 
-      prescriptionNote: prescriptionNote.trim(),
+        prescriptionNote: prescriptionNote.trim(),
 
-      total,
-      discount,
-      payment,
-      balance,
-      dueDate,
-    })
+        total,
+        discount,
+        payment,
+        balance,
+        dueDate,
+      })
+      setEditingJob(null)
+      showToast('Order updated successfully!')
+      navigate('/dashboard/search')
+    } else {
+      addPrescription({
+        name: name.trim(),
+        phone: phone.trim(),
+        nic: nic.trim(),
+        address: address.trim(),
+        note: customerNote.trim(),
+        dob,
+        age: Number(age || 0),
+
+        hasVisionDetails,
+        rightEye: { sph: rSph, cyl: rCyl, axis: rAxis, add: rAdd, va: rVa },
+        leftEye: { sph: lSph, cyl: lCyl, axis: lAxis, add: lAdd, va: lVa },
+        pd,
+        height,
+
+        frameType,
+        frameBrand: selectedFrameBrand,
+        frameCode: selectedFrameCode,
+        frameColor: selectedFrameColor,
+        framePrice: selectedFramePrice,
+
+        lensType,
+        lensSide,
+        lensFactory: selectedLensFactory,
+        lensTypeName: selectedLensType,
+        lensCoating: selectedLensCoating,
+        lensPrice: selectedLensPricePerUnit,
+
+        prescriptionNote: prescriptionNote.trim(),
+
+        total,
+        discount,
+        payment,
+        balance,
+        dueDate,
+      })
+      showToast('Order saved successfully!')
+    }
 
     handleReset()
-    showToast('Prescription saved successfully!')
   }
 
 
@@ -419,15 +547,15 @@ export function CustomerPage() {
         <div className="panel flex flex-col gap-6">
           <div className="flex justify-between items-center border-b pb-3 border-[var(--border)]">
             <div className="panel-title flex items-center gap-2">
-              Add New Customer Prescription
+              {isEditing ? 'Edit Customer Order' : 'New Customer Order'}
             </div>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[var(--text-muted)] text-[12px] font-mono">
                 <Clock size={13} />
-                Prescription
+                Order
               </span>
               <span className="bg-[var(--success-dim)] text-[var(--success)] font-mono text-[11.5px] font-bold px-3 py-1 rounded-full border border-[var(--success)]">
-                Serial: {nextSerialStr}
+                {isEditing ? `📝 Invoice: #${editingItem?.serialNo || ''}` : `Serial: ${nextSerialStr}`}
               </span>
             </div>
           </div>
@@ -758,10 +886,10 @@ export function CustomerPage() {
             </div>
           </div>
 
-          {/* Prescription Notes */}
+          {/* Order Notes */}
           <div className={`field floating ${prescriptionNote ? 'has-value' : ''}`}>
             <input value={prescriptionNote} onChange={(e) => setPrescriptionNote(e.target.value)} placeholder=" " />
-            <label>Prescription Note</label>
+            <label>Order Note</label>
           </div>
 
           {/* Invoice Summary Box */}
@@ -823,7 +951,7 @@ export function CustomerPage() {
           <div className="flex gap-3 items-end">
             <button type="button" onClick={handleReset} className="btn btn-ghost flex-1 justify-center py-3.5" style={{ minHeight: '44px', borderRadius: '12px' }}>
               <RotateCcw size={15} />
-              Reset Form
+              {isEditing ? 'Cancel' : 'Reset Form'}
             </button>
             
             <div className="flex-1 flex flex-col gap-1.5 relative" style={{ minWidth: '160px' }}>
@@ -840,7 +968,7 @@ export function CustomerPage() {
 
             <button type="submit" className="btn btn-dark-green flex-[1.5] justify-center py-3.5" style={{ minHeight: '44px', borderRadius: '12px' }}>
               <Check size={16} />
-              Save Prescription
+              {isEditing ? 'Update Order' : 'Save Order'}
             </button>
           </div>
         </div>

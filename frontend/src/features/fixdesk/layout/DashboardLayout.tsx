@@ -52,7 +52,7 @@ function DashboardShell() {
   return (
     <div className={`fixdesk ${theme === "light" ? "light-theme" : ""}`}>
       <div className="app">
-        <Sidebar onSearchClick={focusSearch} />
+        <Sidebar />
         <main className="main">
           <Topbar
             view={view}
@@ -61,7 +61,7 @@ function DashboardShell() {
             onToggleTheme={toggleTheme}
           />
           <div className="content">
-            <Outlet context={{ focusSearch }} />
+            <Outlet />
           </div>
         </main>
       </div>
