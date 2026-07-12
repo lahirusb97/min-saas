@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Settings, Sun, Moon, LogOut } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
-import { clearToken } from '@/lib/auth'
+import { useAuth } from '@/context/AuthContext'
 import { fmt } from '../utils'
 import { PAGE_TITLES } from './nav'
 
@@ -15,6 +15,7 @@ interface TopbarProps {
 
 export function Topbar({ view, searchInputRef, theme, onToggleTheme }: TopbarProps) {
   const { db } = useFixDesk()
+  const { logout } = useAuth()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
@@ -47,7 +48,7 @@ export function Topbar({ view, searchInputRef, theme, onToggleTheme }: TopbarPro
   }
 
   function handleLogout() {
-    clearToken()
+    logout()
     navigate('/login')
   }
 

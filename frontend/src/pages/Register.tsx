@@ -2,8 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { api } from '@/lib/axios'
-import { setToken } from '@/lib/auth'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 function Register() {
   const navigate = useNavigate()
+  const { register } = useAuth()
   const [shopName, setShopName] = useState('')
   const [contactNumber, setContactNumber] = useState('')
   const [password, setPassword] = useState('')
@@ -22,8 +22,7 @@ function Register() {
     setError(null)
     setLoading(true)
     try {
-      const res = await api.post('/auth/register', { shopName, contactNumber, password })
-      setToken(res.data.accessToken)
+      await register({ shopName, contactNumber, password })
       navigate('/dashboard')
     } catch (err) {
       const message = isAxiosError(err) ? err.response?.data?.message : null

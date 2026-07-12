@@ -2,8 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { api } from '@/lib/axios'
-import { setToken } from '@/lib/auth'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [contactNumber, setContactNumber] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -21,8 +21,7 @@ function Login() {
     setError(null)
     setLoading(true)
     try {
-      const res = await api.post('/auth/login', { contactNumber, password })
-      setToken(res.data.accessToken)
+      await login({ contactNumber, password })
       navigate('/dashboard')
     } catch (err) {
       const message = isAxiosError(err) ? err.response?.data?.message : null
