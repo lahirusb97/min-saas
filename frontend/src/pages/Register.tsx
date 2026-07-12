@@ -1,0 +1,92 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { isAxiosError } from 'axios'
+import { api } from '@/lib/axios'
+import { setToken } from '@/lib/auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+
+function Register() {
+  const navigate = useNavigate()
+  const [shopName, setShopName] = useState('')
+  const [contactNumber, setContactNumber] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await api.post('/auth/register', { shopName, contactNumber, password })
+      setToken(res.data.accessToken)
+      navigate('/dashboard')
+    } catch (err) {
+      const message = isAxiosError(err) ? err.response?.data?.message : null
+      setError(message ?? 'Unable to register. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section className="mx-auto flex min-h-screen max-w-md items-center p-8">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Create your account</CardTitle>
+          <CardDescription>Set up your optical shop workspace.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-1.5">
+              <Label htmlFor="shopName">Optical shop name</Label>
+              <Input
+                id="shopName"
+                type="text"
+                required
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contactNumber">Contact number</Label>
+              <Input
+                id="contactNumber"
+                type="tel"
+                required
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Creating account...' : 'Create account'}
+            </Button>
+          </form>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary underline-offset-4 hover:underline">
+              Log in
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+export default Register

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Settings, Sun, Moon } from 'lucide-react'
+import { Search, Settings, Sun, Moon, LogOut } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
+import { clearToken } from '@/lib/auth'
 import { fmt } from '../utils'
 import { PAGE_TITLES } from './nav'
 
@@ -43,6 +44,11 @@ export function Topbar({ view, searchInputRef, theme, onToggleTheme }: TopbarPro
   function go(path: string) {
     setShowResults(false)
     navigate(path)
+  }
+
+  function handleLogout() {
+    clearToken()
+    navigate('/login')
   }
 
   return (
@@ -136,6 +142,9 @@ export function Topbar({ view, searchInputRef, theme, onToggleTheme }: TopbarPro
         </button>
         <button type="button" className="icon-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Shop Settings" onClick={() => navigate('/dashboard/settings')}>
           <Settings size={18} />
+        </button>
+        <button type="button" className="icon-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Log out" onClick={handleLogout}>
+          <LogOut size={18} />
         </button>
       </div>
     </div>
