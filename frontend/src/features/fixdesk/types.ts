@@ -13,6 +13,60 @@ export interface Customer {
   createdAt: number
 }
 
+export interface EyeDetails {
+  sph: string
+  cyl: string
+  axis: string
+  add: string
+  va: string
+}
+
+export interface Prescription {
+  id: number
+  serialNo: string
+  createdAt: number
+  
+  // Customer Details
+  name: string
+  phone: string
+  nic: string
+  address: string
+  note: string
+  dob: string
+  age: number
+
+  // Vision Details
+  hasVisionDetails: boolean
+  rightEye: EyeDetails
+  leftEye: EyeDetails
+  pd: string
+  height: string
+
+  // Frame Selection
+  frameType: 'inventory' | 'manual'
+  frameBrand: string
+  frameCode: string
+  frameColor: string
+  framePrice: number
+
+  // Lens Selection
+  lensType: 'inventory' | 'manual'
+  lensSide: 'Both' | 'Right' | 'Left'
+  lensFactory: string
+  lensTypeName: string
+  lensCoating: string
+  lensPrice: number
+
+  prescriptionNote: string
+
+  // Payment Details
+  total: number
+  discount: number
+  payment: number
+  balance: number
+  dueDate?: string
+}
+
 export interface RepairJob {
   id: number
   ticketNo: string
@@ -23,6 +77,7 @@ export interface RepairJob {
   status: JobStatus
   cost: number
   advance: number
+  dueDate?: string
   createdAt: number
 }
 
@@ -34,6 +89,8 @@ export interface AccJob {
   item: string
   details: string
   price: number
+  advance?: number
+  dueDate?: string
   status: JobStatus
   createdAt: number
 }
@@ -61,11 +118,14 @@ export interface FixDeskDB {
   repairJobs: RepairJob[]
   accJobs: AccJob[]
   inventory: InventoryItem[]
+  prescriptions: Prescription[]
   settings: ShopSettings
-  counters: { repair: number; acc: number }
+  counters: { repair: number; acc: number; prescription: number }
 }
 
 export const INVENTORY_CATEGORIES = [
+  'Frames',
+  'Lenses',
   'Screens',
   'Batteries',
   'Chargers',

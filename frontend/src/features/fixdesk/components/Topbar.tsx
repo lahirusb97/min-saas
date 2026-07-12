@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Settings } from 'lucide-react'
+import { Search, Settings, Sun, Moon } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { fmt } from '../utils'
 import { PAGE_TITLES } from './nav'
@@ -8,9 +8,11 @@ import { PAGE_TITLES } from './nav'
 interface TopbarProps {
   view: string
   searchInputRef: RefObject<HTMLInputElement | null>
+  theme: 'dark' | 'light'
+  onToggleTheme: () => void
 }
 
-export function Topbar({ view, searchInputRef }: TopbarProps) {
+export function Topbar({ view, searchInputRef, theme, onToggleTheme }: TopbarProps) {
   const { db } = useFixDesk()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
@@ -94,7 +96,7 @@ export function Topbar({ view, searchInputRef }: TopbarProps) {
           )}
           {accMatches.length > 0 && (
             <>
-              <div className="sr-group-label">Accessories Jobs</div>
+              <div className="sr-group-label">Accessories invoice</div>
               {accMatches.map((j) => (
                 <button key={j.id} type="button" className="sr-item" onClick={() => go('/dashboard/accessories')}>
                   <span className="sr-title">
@@ -122,9 +124,20 @@ export function Topbar({ view, searchInputRef }: TopbarProps) {
           )}
         </div>
       </div>
-      <button type="button" className="icon-btn" title="Shop Settings" onClick={() => navigate('/dashboard/settings')}>
-        <Settings />
-      </button>
+      <div className="flex items-center gap-2">
+        <button 
+          type="button" 
+          className="icon-btn" 
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title={theme === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"} 
+          onClick={onToggleTheme}
+        >
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
+        <button type="button" className="icon-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Shop Settings" onClick={() => navigate('/dashboard/settings')}>
+          <Settings size={18} />
+        </button>
+      </div>
     </div>
   )
 }

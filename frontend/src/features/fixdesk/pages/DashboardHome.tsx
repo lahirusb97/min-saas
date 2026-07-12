@@ -8,7 +8,7 @@ interface DashboardOutletContext {
 const TILES = [
   { path: 'customer', label: 'New Customer', desc: 'Add a customer record', icon: UserPlus, color: '232,163,61', stroke: 'var(--copper)' },
   { path: 'repair', label: 'Repair Job', desc: 'Create or view repair tickets', icon: Wrench, color: '79,209,197', stroke: 'var(--teal)' },
-  { path: 'accessories', label: 'Accessories Job', desc: 'Create or view accessory tickets', icon: Layers, color: '156,124,244', stroke: '#9C7CF4' },
+  { path: 'accessories', label: 'Accessories invoice', desc: 'Create or view accessory tickets', icon: Layers, color: '156,124,244', stroke: '#9C7CF4' },
   { path: 'inventory', label: 'Inventory', desc: 'Manage stock levels', icon: Boxes, color: '240,98,95', stroke: 'var(--danger)' },
 ]
 
