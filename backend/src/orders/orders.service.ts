@@ -199,6 +199,15 @@ export class OrdersService {
     };
   }
 
+  private async adjustStock(frameStockId: number | undefined, branchId: number, amount: number) {
+    if (!frameStockId) return;
+    const stock = await this.stocksRepository.findOne({ where: { id: frameStockId, branchId } });
+    if (stock) {
+      stock.qty += amount;
+      await this.stocksRepository.save(stock);
+    }
+  }
+
   async create(userId: number, dto: CreateOrderDto) {
     const context = await this.getContext(userId);
 
@@ -231,6 +240,10 @@ export class OrdersService {
     });
     const saved = await this.ordersRepository.save(order);
     await this.saveItems(saved.id, items);
+
+    if (items.frame.sourceType === SourceType.INVENTORY && items.frame.frameStockId) {
+      await this.adjustStock(items.frame.frameStockId, context.branchId, -1);
+    }
 
     return this.toResponse(await this.findOneEntity(userId, saved.id));
   }
@@ -268,6 +281,10 @@ export class OrdersService {
     const existingLens = order.items.find((item) => item.itemType === OrderItemType.LENS);
     const items = this.resolveItems(dto, { frame: existingFrame, lens: existingLens });
 
+    if (existingFrame && existingFrame.sourceType === SourceType.INVENTORY && existingFrame.frameStockId) {
+      await this.adjustStock(existingFrame.frameStockId, context.branchId, 1);
+    }
+
     order.visionTestId = dto.visionTestId ?? order.visionTestId;
     order.prescriptionNote = dto.prescriptionNote ?? order.prescriptionNote;
     order.dueDate = dto.dueDate ?? order.dueDate;
@@ -285,11 +302,22 @@ export class OrdersService {
     const saved = await this.ordersRepository.save(order);
     await this.saveItems(saved.id, items);
 
+    if (items.frame.sourceType === SourceType.INVENTORY && items.frame.frameStockId) {
+      await this.adjustStock(items.frame.frameStockId, context.branchId, -1);
+    }
+
     return this.toResponse(await this.findOneEntity(userId, saved.id));
   }
 
   async remove(userId: number, id: number) {
     const order = await this.findOneEntity(userId, id);
+    const { branchId } = await this.getContext(userId);
+
+    const existingFrame = order.items.find((item) => item.itemType === OrderItemType.FRAME);
+    if (existingFrame && existingFrame.sourceType === SourceType.INVENTORY && existingFrame.frameStockId) {
+      await this.adjustStock(existingFrame.frameStockId, branchId, 1);
+    }
+
     await this.ordersRepository.remove(order);
     return { id };
   }

@@ -688,10 +688,6 @@ export function CustomerPage() {
           <div className="border border-[var(--border)] rounded-[var(--radius)] p-4 bg-[var(--surface-2)]">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-[13.5px]">Vision / Eye Details</span>
-              <label className="switch">
-                <input type="checkbox" checked={hasVisionDetails} onChange={(e) => setHasVisionDetails(e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
             </div>
 
             {hasVisionDetails && (

@@ -13,6 +13,7 @@ import {
   Printer
 } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
+import { fmt } from '../utils'
 
 export function AccountsPage() {
   const { 
@@ -40,6 +41,8 @@ export function AccountsPage() {
   const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null)
   const [expenseDesc, setExpenseDesc] = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
+  const [printModalItem, setPrintModalItem] = useState<any | null>(null)
+  const [paperSize, setPaperSize] = useState<'roll' | 'a5' | 'a4'>('roll')
 
   // Date matcher helper
   const isSameDay = (timestamp: number, filterDateStr: string) => {
@@ -85,6 +88,7 @@ export function AccountsPage() {
     timestamp: p.createdAt,
     type: 'Order',
     isOutflow: false,
+    original: p
   }))
 
   const repairsMapped = repairsToday.map(r => ({
@@ -99,6 +103,7 @@ export function AccountsPage() {
     timestamp: r.createdAt,
     type: 'Repair',
     isOutflow: false,
+    original: r
   }))
 
   const accMapped = accToday.map(a => ({
@@ -113,6 +118,7 @@ export function AccountsPage() {
     timestamp: a.createdAt,
     type: 'Accessories',
     isOutflow: false,
+    original: a
   }))
 
   const expensesMapped = expensesToday.map(e => ({
@@ -400,10 +406,7 @@ export function AccountsPage() {
                               type="button"
                               className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--copper)] transition-colors"
                               title="Print Invoice"
-                              onClick={() => {
-                                showToast(`Printing invoice ${tx.invoiceNo}...`)
-                                window.print()
-                              }}
+                              onClick={() => setPrintModalItem(tx)}
                             >
                               <Printer size={13.5} />
                             </button>
@@ -498,10 +501,7 @@ export function AccountsPage() {
                         type="button"
                         className="w-8 h-8 rounded-md flex items-center justify-center border border-[var(--border)] hover:bg-[var(--surface-3)] text-[var(--copper)] transition-colors"
                         title="Print Invoice"
-                        onClick={() => {
-                          showToast(`Printing invoice ${tx.invoiceNo}...`)
-                          window.print()
-                        }}
+                        onClick={() => setPrintModalItem(tx)}
                       >
                         <Printer size={13.5} />
                       </button>
@@ -599,6 +599,297 @@ export function AccountsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Printable Receipt Preview Modal */}
+      {printModalItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-50 animate-fade-in print-backdrop" onClick={() => setPrintModalItem(null)}>
+          <div 
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 w-[95%] max-w-[800px] shadow-2xl flex flex-col gap-5 relative animate-zoom-in text-left max-h-[92vh] overflow-y-auto print-modal-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="no-print flex items-center justify-between border-b border-[var(--border)] pb-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--copper-dim)]/20 text-[var(--copper)]">
+                  <Printer size={18} />
+                </div>
+                <div>
+                  <h2 className="text-[16px] font-extrabold font-display tracking-tight text-[var(--text)]">
+                    Receipt Content Preview
+                  </h2>
+                  <p className="text-[11.5px] text-[var(--text-muted)] mt-0.5">Customize layout parameters and print</p>
+                </div>
+              </div>
+              
+              <button 
+                type="button" 
+                onClick={() => setPrintModalItem(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-[24px]"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Paper Size selector (no-print) */}
+            <div className="no-print flex justify-between items-center gap-4 mb-1">
+              <label className="text-[12.5px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Paper Format / Size</label>
+              <select 
+                value={paperSize} 
+                onChange={(e) => setPaperSize(e.target.value as any)}
+                className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2 text-[13px] text-[var(--text)] outline-none cursor-pointer focus:border-[var(--copper)]"
+              >
+                <option value="roll">80x80mm Thermal Roll</option>
+                <option value="a5">A5 Sheet Layout</option>
+                <option value="a4">A4 Sheet Layout</option>
+              </select>
+            </div>
+
+            {/* Preview Sheet Container */}
+            <div className="flex-1 py-4 overflow-y-auto max-h-[50vh] border border-[var(--border)] rounded-2xl bg-[var(--surface-3)]/30 no-print">
+              <div id="printable-receipt" className={`text-[var(--text)] font-sans ${paperSize === 'roll' ? 'preview-roll' : paperSize === 'a5' ? 'preview-a5' : 'preview-a4'}`}>
+                {/* Header */}
+                <div className="text-center mb-6">
+                  <h1 className="font-extrabold text-[20px] font-display text-[var(--text)] uppercase tracking-wide">
+                    {db.settings.name || 'FIXDESK'}
+                  </h1>
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono mt-1">
+                    INVOICE / RECEIPT
+                  </p>
+                  <p className="text-[11px] text-[var(--text-faint)] font-mono">
+                    Invoice No: {printModalItem.invoiceNo} | Date: {new Date(printModalItem.timestamp).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Customer & Order Info */}
+                <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]/30">
+                  <h3 className="text-[12.5px] font-bold mb-3 uppercase tracking-wider text-[var(--copper)] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--copper)]" />
+                    Customer & Order Info
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4 text-[12px]">
+                    <div>
+                      <span className="text-[var(--text-muted)] block text-[11px]">Customer Name</span>
+                      <span className="font-semibold text-[var(--text)]">{printModalItem.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-muted)] block text-[11px]">Contact Number</span>
+                      <span className="font-semibold text-[var(--text)]">{printModalItem.contact}</span>
+                    </div>
+                    {printModalItem.type === 'Order' && (
+                      <>
+                        <div>
+                          <span className="text-[var(--text-muted)] block text-[11px]">NIC / ID</span>
+                          <span className="font-semibold text-[var(--text)]">{printModalItem.original?.nic || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[var(--text-muted)] block text-[11px]">Address</span>
+                          <span className="font-semibold text-[var(--text)]">{printModalItem.original?.address || '—'}</span>
+                        </div>
+                      </>
+                    )}
+                    {printModalItem.original?.dueDate && (
+                      <div>
+                        <span className="text-[var(--text-muted)] block text-[11px]">Delivery Due</span>
+                        <span className="font-semibold text-[var(--text)]">{new Date(printModalItem.original.dueDate).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Conditional Sections based on item type */}
+                {printModalItem.type === 'Order' && printModalItem.original && (
+                  <>
+                    {/* Frame & Lens Specification */}
+                    <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]/30">
+                      <h3 className="text-[12.5px] font-bold mb-3 uppercase tracking-wider text-[var(--teal)] flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)]" />
+                        Frame & Lens Specification
+                      </h3>
+                      <div className="flex flex-col gap-3 text-[12px]">
+                        <div>
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Frame Model Mapping</span>
+                          <span className="font-semibold text-[var(--text)]">
+                            {printModalItem.original.frameBrand || '—'} / {printModalItem.original.frameColor || '—'} / {printModalItem.original.frameCode || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Lens Material Profile</span>
+                          <div className="pl-2 border-l-2 border-[var(--border)] mt-1 flex flex-col gap-1 text-[11px]">
+                            <span><strong>Side:</strong> {printModalItem.original.lensSide || 'Both'}</span>
+                            <span><strong>Factory:</strong> {printModalItem.original.lensFactory || '—'}</span>
+                            <span><strong>Type/Name:</strong> {printModalItem.original.lensTypeName || '—'}</span>
+                            <span><strong>Coating:</strong> {printModalItem.original.lensCoating || '—'}</span>
+                          </div>
+                        </div>
+                        {printModalItem.original.prescriptionNote && (
+                          <div>
+                            <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Global Bill Remarks</span>
+                            <p className="text-[var(--text)] italic mt-0.5">{printModalItem.original.prescriptionNote}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Eye Examination Details */}
+                    {printModalItem.original.hasVisionDetails && (
+                      <div className="mb-6">
+                        <h3 className="text-[12.5px] font-bold mb-3 uppercase tracking-wider text-[var(--copper)] flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--copper)]" />
+                          Eye Examination Details
+                        </h3>
+                        <div className="table-wrap">
+                          <table className="w-full border-collapse border border-[var(--border)] text-[12px] text-center">
+                            <thead>
+                              <tr className="bg-[var(--surface-3)] text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
+                                <th className="border border-[var(--border)] p-2">Side</th>
+                                <th className="border border-[var(--border)] p-2">SPH</th>
+                                <th className="border border-[var(--border)] p-2">CYL</th>
+                                <th className="border border-[var(--border)] p-2">AXS</th>
+                                <th className="border border-[var(--border)] p-2">VA</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-[var(--border)] p-2 font-semibold text-left">Right Eye</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.rightEye?.sph || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.rightEye?.cyl || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.rightEye?.axis || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.rightEye?.va || '—'}</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[var(--border)] p-2 font-semibold text-left">Left Eye</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.leftEye?.sph || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.leftEye?.cyl || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.leftEye?.axis || '—'}</td>
+                                <td className="border border-[var(--border)] p-2 font-mono">{printModalItem.original.leftEye?.va || '—'}</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[var(--border)] p-2 font-semibold text-left">ADD</td>
+                                <td className="border border-[var(--border)] p-2 font-mono" colSpan={2}>
+                                  {printModalItem.original.rightEye?.add || '0.00'} (Right)
+                                </td>
+                                <td className="border border-[var(--border)] p-2 font-mono" colSpan={2}>
+                                  {printModalItem.original.leftEye?.add || '0.00'} (Left)
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[var(--border)] p-2 font-semibold text-left">IPD / PD</td>
+                                <td className="border border-[var(--border)] p-2 font-mono text-left" colSpan={4}>
+                                  {printModalItem.original.pd || '—'} mm
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {printModalItem.type === 'Repair' && printModalItem.original && (
+                  <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]/30 text-[12.5px] flex flex-col gap-3">
+                    <h3 className="text-[12.5px] font-bold uppercase tracking-wider text-[var(--teal)] flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)]" />
+                      Repair Service Details
+                    </h3>
+                    <div>
+                      <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Device / Item</span>
+                      <span className="font-semibold text-[var(--text)]">{printModalItem.original.device}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Issue Description</span>
+                      <p className="text-[var(--text)]">{printModalItem.original.issue}</p>
+                    </div>
+                    {printModalItem.original.notes && (
+                      <div>
+                        <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Remarks / Notes</span>
+                        <p className="text-[var(--text)] italic mt-0.5">{printModalItem.original.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {printModalItem.type === 'Accessories' && printModalItem.original && (
+                  <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]/30 text-[12.5px] flex flex-col gap-3">
+                    <h3 className="text-[12.5px] font-bold uppercase tracking-wider text-[var(--teal)] flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)]" />
+                      Accessories Sales Details
+                    </h3>
+                    <div>
+                      <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Item Purchased</span>
+                      <span className="font-semibold text-[var(--text)]">{printModalItem.original.item}</span>
+                    </div>
+                    {printModalItem.original.details && (
+                      <div>
+                        <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold tracking-wider">Additional Details</span>
+                        <p className="text-[var(--text)]">{printModalItem.original.details}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pricing Totals Section */}
+                <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] mt-4">
+                  <div className="flex flex-col gap-2.5 text-[13px]">
+                    <div className="flex justify-between items-center text-[var(--text-muted)]">
+                      <span>Actual Total:</span>
+                      <span className="font-mono font-bold text-[var(--text)]">{fmt(db.settings.currency, printModalItem.total)}</span>
+                    </div>
+                    
+                    {printModalItem.original?.discount > 0 && (
+                      <div className="flex justify-between items-center text-[var(--danger)]">
+                        <span className="flex items-center gap-1.5">
+                          Discount Price:
+                          <span className="px-1.5 py-0.5 rounded-md bg-[var(--danger-dim)] text-white text-[9.5px] font-bold uppercase tracking-wider">
+                            {Math.round((printModalItem.original.discount / printModalItem.total) * 100)}% OFF
+                          </span>
+                        </span>
+                        <span className="font-mono font-bold">
+                          {fmt(db.settings.currency, printModalItem.total - printModalItem.original.discount)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center text-[var(--success)]">
+                      <span>Advance Paid:</span>
+                      <span className="font-mono font-bold">
+                        {fmt(db.settings.currency, printModalItem.original?.payment || printModalItem.original?.advance || 0)}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-[var(--border)] pt-2 mt-1 flex justify-between items-center text-[14.5px] font-bold">
+                      <span className="text-[var(--text)]">Balance Due:</span>
+                      <span className="font-mono text-[var(--copper)]">{fmt(db.settings.currency, printModalItem.balance)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Print Confirmation Actions */}
+            <div className="no-print flex items-center justify-end gap-4 mt-3 pt-3 border-t border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => setPrintModalItem(null)}
+                className="text-[13px] font-semibold text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Close Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  showToast(`Sending invoice ${printModalItem.invoiceNo} to printer...`)
+                  window.print()
+                }}
+                className="px-5 py-2.5 rounded-xl bg-[var(--success)] text-white text-[13px] font-bold hover:bg-[var(--success-hover)] transition-colors shadow-sm flex items-center gap-1.5"
+                style={{ backgroundColor: 'var(--success)', borderRadius: '12px' }}
+              >
+                <Printer size={14} />
+                Print Receipt
+              </button>
+            </div>
           </div>
         </div>
       )}
