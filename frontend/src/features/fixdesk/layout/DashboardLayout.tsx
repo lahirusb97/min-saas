@@ -36,7 +36,7 @@ function DashboardShell() {
   });
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "light";
+    const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     localStorage.setItem("fixdesk-theme", nextTheme);
   }

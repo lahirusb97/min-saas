@@ -77,7 +77,7 @@ function CustomSelect({ label, value, options, onChange }: CustomSelectProps) {
             }}
           />
           <div className="custom-select-dropdown z-50 animate-fade-in" style={{ zIndex: 9999 }}>
-            {normalizedOptions.length > 10 && (
+            {normalizedOptions.length > 0 && (
               <div className="p-2 border-b border-[var(--border)]">
                 <input
                   type="text"
@@ -796,8 +796,8 @@ export function CustomerPage() {
         <div className="panel flex flex-col gap-6">
           
           {/* Tabbed Selection Panel */}
-          <div className="border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] overflow-hidden">
-            <div className="flex border-b border-[var(--border)] bg-[var(--surface-2)]">
+          <div className="border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)]">
+            <div className="flex border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-[var(--radius)]">
               <button
                 type="button"
                 className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-all text-center ${

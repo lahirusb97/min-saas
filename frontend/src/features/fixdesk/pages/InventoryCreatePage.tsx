@@ -24,7 +24,7 @@ export function InventoryCreatePage() {
   const colorRef = useRef<HTMLInputElement>(null)
   const frameTypeRef = useRef<HTMLSelectElement>(null)
   const lensTypeRef = useRef<HTMLSelectElement>(null)
-  const lensCoatingRef = useRef<HTMLSelectElement>(null)
+  const lensCoatingRef = useRef<HTMLInputElement>(null)
   const lensFactoryRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -107,11 +107,16 @@ export function InventoryCreatePage() {
     if (isLenses) {
       setSaving(true)
       try {
+        const typeVal = lensTypeRef.current!.value
+        const coatingVal = lensCoatingRef.current!.value.trim()
+        const factoryVal = lensFactoryRef.current!.value.trim()
+        const generatedName = [typeVal, coatingVal, factoryVal].filter(Boolean).join(' ')
+
         await lensService.create({
-          name: nameRef.current!.value.trim(),
-          type: lensTypeRef.current!.value,
-          coating: lensCoatingRef.current!.value,
-          factory: lensFactoryRef.current!.value.trim(),
+          name: generatedName || 'Lens',
+          type: typeVal,
+          coating: coatingVal,
+          factory: factoryVal,
           price: Number(priceRef.current!.value || 0),
         })
         formRef.current?.reset()
@@ -146,7 +151,7 @@ export function InventoryCreatePage() {
       </div>
       <form ref={formRef} onSubmit={handleSubmit}>
         <div className="form-grid">
-          {!isFrames && (
+          {!isFrames && !isLenses && (
             <div className="field">
               <label>Item Name *</label>
               <input required ref={nameRef} placeholder={`e.g. ${label} item`} />
@@ -213,11 +218,7 @@ export function InventoryCreatePage() {
               </div>
               <div className="field">
                 <label>Coating</label>
-                <select ref={lensCoatingRef} defaultValue={LENS_COATINGS[0]}>
-                  {LENS_COATINGS.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
+                <input ref={lensCoatingRef} placeholder="e.g. Anti-Glare" />
               </div>
               <div className="field">
                 <label>Factory Name</label>
