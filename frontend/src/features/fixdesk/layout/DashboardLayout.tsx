@@ -36,18 +36,11 @@ function DashboardShell() {
   });
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "light";
+    const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     localStorage.setItem("fixdesk-theme", nextTheme);
   }
 
-  function focusSearch() {
-    searchInputRef.current?.focus();
-    searchInputRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-  }
 
   return (
     <div className={`fixdesk ${theme === "light" ? "light-theme" : ""}`}>

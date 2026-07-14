@@ -5,9 +5,6 @@ import { useFixDesk } from '../context/FixDeskContext'
 
 export function Sidebar() {
   const { db, setEditingJob } = useFixDesk()
-  const activeRepairCount = db.repairJobs.filter((j) => j.status !== 'Delivered').length
-  const activeAccCount = db.accJobs.filter((j) => j.status !== 'Delivered').length
-  const counts: Record<string, number | undefined> = { repair: activeRepairCount, accessories: activeAccCount }
 
   return (
     <aside className="sidebar flex flex-col justify-between">
@@ -36,7 +33,6 @@ export function Sidebar() {
               <Icon />
             </span>
             {label}
-            {counts[view] !== undefined && <span className="count">{counts[view]}</span>}
           </NavLink>
         ))}
 

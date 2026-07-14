@@ -1094,3 +1094,95 @@
   animation: modalFadeIn 0.18s ease-out forwards;
 }
 
+/* Hide number input spinners (up/down arrows) */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
+/* ===== INVOICE PRINT PREVIEW STYLES ===== */
+@media screen {
+  .preview-roll {
+    width: 360px;
+    margin: 0 auto;
+    border: 1px dashed var(--border);
+    padding: 20px;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
+  .preview-a5 {
+    width: 580px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    padding: 30px;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
+  .preview-a4 {
+    width: 760px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    padding: 40px;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
+}
+
+@media print {
+  /* Hide background pattern and reset typography */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  /* Hide regular UI elements */
+  .fixdesk .app,
+  .fixdesk .sidebar,
+  .fixdesk .topbar,
+  .fixdesk .bottom-nav,
+  .fixdesk .panel,
+  .fixdesk .toast,
+  .fixdesk .fixed:not(.print-backdrop),
+  .fixdesk .no-print {
+    display: none !important;
+  }
+
+  /* Allow modal content to overlay body */
+  .fixdesk .print-backdrop {
+    background: none !important;
+    backdrop-filter: none !important;
+    position: relative !important;
+    display: block !important;
+    z-index: auto !important;
+  }
+
+  .fixdesk .print-modal-container {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    animation: none !important;
+  }
+
+  #printable-receipt {
+    display: block !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
