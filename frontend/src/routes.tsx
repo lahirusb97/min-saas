@@ -1,11 +1,9 @@
 import { Suspense, lazy } from "react";
 import type { ReactNode } from "react";
 import { createBrowserRouter } from "react-router-dom";
-import App from "./App";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RootRedirect } from "./components/RootRedirect";
 
-const Home = lazy(() => import("./pages/Home"));
-const About = lazy(() => import("./pages/About"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const DashboardLayout = lazy(() =>
@@ -71,14 +69,7 @@ import { SearchPage } from "./features/fixdesk/pages/SearchPage";
 import { AccountsPage } from "./features/fixdesk/pages/AccountsPage";
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <App />,
-    children: [
-      { index: true, element: withSuspense(<Home />) },
-      { path: "about", element: withSuspense(<About />) },
-    ],
-  },
+  { path: "/", element: <RootRedirect /> },
   { path: "/login", element: withSuspense(<Login />) },
   { path: "/register", element: withSuspense(<Register />) },
   {
