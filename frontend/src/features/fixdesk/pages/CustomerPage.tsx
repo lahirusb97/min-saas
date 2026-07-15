@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { Check, Clock, RotateCcw, Calendar } from 'lucide-react'
 import { useFixDesk } from '../context/FixDeskContext'
 import { fmt } from '../utils'
-import { frameService, type Frame } from '../services/frameService'
+import { frameService, type Frame, type FrameBrowseResult } from '../services/frameService'
 import { lensService, type Lens } from '../services/lensService'
 import { customerService } from '../services/customerService'
 import { visionTestService } from '../services/visionTestService'
@@ -215,6 +215,10 @@ export function CustomerPage() {
   // Frame Selection
   const [frameType, setFrameType] = useState<'inventory' | 'manual'>('inventory')
   const [frameInventoryId, setFrameInventoryId] = useState('')
+  const [browseBrand, setBrowseBrand] = useState('')
+  const [browseCode, setBrowseCode] = useState('')
+  const [browseColor, setBrowseColor] = useState('')
+  const [browseResult, setBrowseResult] = useState<FrameBrowseResult>({ brands: [], codes: [], colors: [], items: [] })
   const [manualFrameBrand, setManualFrameBrand] = useState('')
   const [manualFrameCode, setManualFrameCode] = useState('')
   const [manualFrameColor, setManualFrameColor] = useState('')
@@ -246,6 +250,40 @@ export function CustomerPage() {
     frameService.list().then(setFrameStocks).catch(() => {})
     lensService.list().then(setLensList).catch(() => {})
   }, [])
+
+  // Chained frame selection: brand -> code -> color, each narrowed to in-stock items
+  useEffect(() => {
+    if (frameType !== 'inventory') return
+    frameService
+      .browse({ brand: browseBrand, code: browseCode, color: browseColor })
+      .then(setBrowseResult)
+      .catch(() => {})
+  }, [frameType, browseBrand, browseCode, browseColor])
+
+  // Once brand + code + color narrow to a single in-stock item, auto-select it
+  useEffect(() => {
+    if (browseBrand && browseCode && browseColor && browseResult.items.length === 1) {
+      setFrameInventoryId(String(browseResult.items[0].id))
+    }
+  }, [browseResult, browseBrand, browseCode, browseColor])
+
+  function handleBrowseBrand(val: string) {
+    setBrowseBrand(val)
+    setBrowseCode('')
+    setBrowseColor('')
+    setFrameInventoryId('')
+  }
+
+  function handleBrowseCode(val: string) {
+    setBrowseCode(val)
+    setBrowseColor('')
+    setFrameInventoryId('')
+  }
+
+  function handleBrowseColor(val: string) {
+    setBrowseColor(val)
+    setFrameInventoryId('')
+  }
 
   // --- Dynamic Calculations ---
 
@@ -430,6 +468,9 @@ export function CustomerPage() {
           const found = frameItems.find(f => f.brand === job.frameBrand && f.modelNumber === job.frameCode)
           if (found) {
             setFrameInventoryId(String(found.id))
+            setBrowseBrand(job.frameBrand || '')
+            setBrowseCode(job.frameCode || '')
+            setBrowseColor(job.frameColor || '')
           } else {
             setManualFrameBrand(job.frameBrand || '')
             setManualFrameCode(job.frameCode || '')
@@ -496,6 +537,9 @@ export function CustomerPage() {
     setHeight('')
     setFrameType('inventory')
     setFrameInventoryId('')
+    setBrowseBrand('')
+    setBrowseCode('')
+    setBrowseColor('')
     setManualFrameBrand('')
     setManualFrameCode('')
     setManualFrameColor('')
@@ -890,15 +934,44 @@ export function CustomerPage() {
                   </div>
 
                   {frameType === 'inventory' ? (
-                    <CustomSelect
-                      label="Select Frame from Stock"
-                      value={frameInventoryId}
-                      options={frameItems.map((f) => ({
-                        label: `${f.brand} ${f.modelNumber}${f.color ? ' ' + f.color : ''} - (${fmt(db.settings.currency, f.price)})`,
-                        value: String(f.id)
-                      }))}
-                      onChange={setFrameInventoryId}
-                    />
+                    <div className="flex flex-col gap-3">
+                      <div className="form-grid">
+                        <CustomSelect
+                          label="Brand"
+                          value={browseBrand}
+                          options={browseResult.brands}
+                          onChange={handleBrowseBrand}
+                        />
+                        <CustomSelect
+                          label="Code / Model"
+                          value={browseCode}
+                          options={browseResult.codes}
+                          onChange={handleBrowseCode}
+                        />
+                        <CustomSelect
+                          label="Color"
+                          value={browseColor}
+                          options={browseResult.colors}
+                          onChange={handleBrowseColor}
+                        />
+                      </div>
+
+                      {browseBrand && browseCode && browseColor && (
+                        browseResult.items.length > 0 ? (
+                          <CustomSelect
+                            label="Matching Item"
+                            value={frameInventoryId}
+                            options={browseResult.items.map((f) => ({
+                              label: `${f.brand} ${f.modelNumber}${f.color ? ' ' + f.color : ''} - Qty: ${f.qty} - (${fmt(db.settings.currency, f.price)})`,
+                              value: String(f.id),
+                            }))}
+                            onChange={setFrameInventoryId}
+                          />
+                        ) : (
+                          <p className="text-[12px] text-[var(--danger)]">No stock available for this brand/code/color combination.</p>
+                        )
+                      )}
+                    </div>
                   ) : (
                     <div className="form-grid">
                       <div className={`field floating ${manualFrameBrand ? 'has-value' : ''}`}>

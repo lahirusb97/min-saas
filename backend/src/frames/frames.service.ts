@@ -251,4 +251,50 @@ export class FramesService {
     const colors = await this.colorsRepository.find({ where: { organizationId }, order: { name: 'ASC' } });
     return colors.map((c) => c.name);
   }
+
+  /**
+   * Chained frame selection: brand -> code (model) -> color, each step narrowed to
+   * in-stock (qty > 0) items only. Every response includes brands/codes/colors for
+   * whichever step is reachable given the params supplied, plus the matching items.
+   */
+  async browseFrames(userId: number, brand?: string, code?: string, color?: string) {
+    const { branchId } = await this.getContext(userId);
+    const stocks = await this.stocksRepository.find({
+      where: { branchId },
+      relations: { frame: { brand: true, model: true, color: true } },
+    });
+    const inStock = stocks.filter((s) => s.qty > 0);
+
+    const brandNorm = brand?.trim() ? normalizeName(brand) : undefined;
+    const codeNorm = code?.trim() ? normalizeName(code) : undefined;
+    const colorNorm = color?.trim() ? normalizeName(color) : undefined;
+
+    const matchesBrand = (s: Stock) => !brandNorm || normalizeName(s.frame.brand.name) === brandNorm;
+    const matchesCode = (s: Stock) => !codeNorm || normalizeName(s.frame.model.name) === codeNorm;
+    const matchesColor = (s: Stock) => !colorNorm || (!!s.frame.color && normalizeName(s.frame.color.name) === colorNorm);
+
+    const brands = Array.from(
+      new Set(inStock.filter(matchesCode).filter(matchesColor).map((s) => s.frame.brand.name)),
+    ).sort();
+
+    const codes = brandNorm
+      ? Array.from(new Set(inStock.filter(matchesBrand).filter(matchesColor).map((s) => s.frame.model.name))).sort()
+      : [];
+
+    const colors = brandNorm && codeNorm
+      ? Array.from(
+          new Set(
+            inStock
+              .filter(matchesBrand)
+              .filter(matchesCode)
+              .map((s) => s.frame.color?.name)
+              .filter((n): n is string => !!n),
+          ),
+        ).sort()
+      : [];
+
+    const items = inStock.filter(matchesBrand).filter(matchesCode).filter(matchesColor).map((s) => this.toResponse(s));
+
+    return { brands, codes, colors, items };
+  }
 }

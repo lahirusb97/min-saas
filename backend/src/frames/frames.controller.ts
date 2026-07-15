@@ -39,6 +39,16 @@ export class FramesController {
     return this.framesService.listColors(user.id);
   }
 
+  @Get('browse')
+  browse(
+    @CurrentUser() user: AuthUser,
+    @Query('brand') brand?: string,
+    @Query('code') code?: string,
+    @Query('color') color?: string,
+  ) {
+    return this.framesService.browseFrames(user.id, brand, code, color);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
     return this.framesService.findOne(user.id, id);

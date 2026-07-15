@@ -26,6 +26,13 @@ export interface CreateFrameInput {
 
 export type UpdateFrameInput = Partial<CreateFrameInput>
 
+export interface FrameBrowseResult {
+  brands: string[]
+  codes: string[]
+  colors: string[]
+  items: Frame[]
+}
+
 export const frameService = {
   list: () => api.get<Frame[]>('/frames').then((res) => res.data),
   get: (id: number) => api.get<Frame>(`/frames/${id}`).then((res) => res.data),
@@ -36,4 +43,14 @@ export const frameService = {
   listModels: (brand?: string) =>
     api.get<string[]>('/frames/models', { params: brand ? { brand } : undefined }).then((res) => res.data),
   listColors: () => api.get<string[]>('/frames/colors').then((res) => res.data),
+  browse: (params: { brand?: string; code?: string; color?: string } = {}) =>
+    api
+      .get<FrameBrowseResult>('/frames/browse', {
+        params: {
+          brand: params.brand || undefined,
+          code: params.code || undefined,
+          color: params.color || undefined,
+        },
+      })
+      .then((res) => res.data),
 }
